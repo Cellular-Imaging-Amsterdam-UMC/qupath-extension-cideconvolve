@@ -40,6 +40,13 @@ if errorlevel 1 (
 
 where gh >nul 2>nul
 if errorlevel 1 (
+    if exist "%ProgramFiles%\GitHub CLI\gh.exe" (
+        set "PATH=%ProgramFiles%\GitHub CLI;%PATH%"
+    )
+)
+
+where gh >nul 2>nul
+if errorlevel 1 (
     echo GitHub CLI ^(gh^) was not found in PATH.
     echo Attempting install with winget...
     where winget >nul 2>nul
@@ -53,6 +60,10 @@ if errorlevel 1 (
         echo ERROR: GitHub CLI install failed.
         goto :fail
     )
+)
+
+where gh >nul 2>nul
+if errorlevel 1 (
     if exist "%ProgramFiles%\GitHub CLI\gh.exe" (
         set "PATH=%ProgramFiles%\GitHub CLI;%PATH%"
     )
