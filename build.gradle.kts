@@ -5,12 +5,20 @@ plugins {
     id("qupath-conventions")
 }
 
+val extensionVersion = providers.gradleProperty("releaseVersion")
+    .orElse("0.1.0-SNAPSHOT")
+    .get()
+
 qupathExtension {
     name = "qupath-extension-cideconvolve"
     group = "nl.amsterdamumc"
-    version = "0.1.0-SNAPSHOT"
+    version = extensionVersion
     description = "QuPath extension to run CIDeconvolve from an existing Python environment"
     automaticModule = "nl.amsterdamumc.qupath.extension.cideconvolve"
+}
+
+tasks.shadowJar {
+    archiveClassifier.set("")
 }
 
 dependencies {

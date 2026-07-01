@@ -181,3 +181,21 @@ requires compatible NGFF/Zarr metadata; older Python package versions may write
 layouts that QuPath cannot open directly.
 
 Developer/build notes are in [docs/DEVELOPER.md](docs/DEVELOPER.md).
+
+## Releasing
+
+Maintainers can create a GitHub Release with the installable QuPath jar by
+running:
+
+```cmd
+release_github.cmd
+```
+
+The script reads `version.txt`, builds
+`qupath-extension-cideconvolve-0.1.0.jar`, creates the matching Git tag, and
+uploads the jar as a GitHub Release asset. Pass a tag explicitly to override the
+file:
+
+```cmd
+release_github.cmd v0.1.0
+```
