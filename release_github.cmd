@@ -12,7 +12,7 @@ if not defined TAG (
 )
 if not defined TAG (
     echo ERROR: No tag provided and version.txt is missing or empty.
-    echo Usage: %~nx0 [v0.1.0]
+    echo Usage: %~nx0 [v0.2.1]
     exit /b 1
 )
 

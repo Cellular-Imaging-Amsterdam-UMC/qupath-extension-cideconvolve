@@ -192,10 +192,10 @@ release_github.cmd
 ```
 
 The script reads `version.txt`, builds
-`qupath-extension-cideconvolve-0.1.0.jar`, creates the matching Git tag, and
+`qupath-extension-cideconvolve-0.2.1.jar`, creates the matching Git tag, and
 uploads the jar as a GitHub Release asset. Pass a tag explicitly to override the
 file:
 
 ```cmd
-release_github.cmd v0.1.0
+release_github.cmd v0.2.1
 ```
