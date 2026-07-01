@@ -66,14 +66,18 @@ or a newer version.
 
 ## Install The QuPath Extension
 
-1. Copy the extension jar into your QuPath extensions folder.
-2. Restart QuPath.
-3. Open `Edit > Preferences > CIDeconvolve`.
-4. Set `Python executable` to the `python.exe` from your Python 3.12
+1. Download the extension jar from the
+   [latest GitHub release](https://github.com/Cellular-Imaging-Amsterdam-UMC/qupath-extension-cideconvolve/releases/latest).
+   For version `v0.2.1`, download
+   `qupath-extension-cideconvolve-0.2.1.jar`.
+2. Copy the downloaded jar into your QuPath extensions folder.
+3. Restart QuPath.
+4. Open `Edit > Preferences > CIDeconvolve`.
+5. Set `Python executable` to the `python.exe` from your Python 3.12
    environment.
-5. Optional: choose whether outputs go next to the QuPath project or next to the
+6. Optional: choose whether outputs go next to the QuPath project or next to the
    original image file.
-6. Run `Extensions > CIDeconvolve > Validate Python environment`.
+7. Run `Extensions > CIDeconvolve > Validate Python environment`.
 
 If validation succeeds, the extension is ready to use.
 
