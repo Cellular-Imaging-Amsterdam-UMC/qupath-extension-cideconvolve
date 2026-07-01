@@ -89,3 +89,21 @@ result.getLogs().each { println it }
 
 Use `runBlocking()` when a script needs returned logs/status. Use `run()` for
 GUI-style asynchronous convenience.
+
+## Releasing
+
+Maintainers can create a GitHub Release with the installable QuPath jar by
+running:
+
+```cmd
+release_github.cmd
+```
+
+The script reads `version.txt`, builds
+`qupath-extension-cideconvolve-0.2.1.jar`, creates the matching Git tag, and
+uploads the jar as a GitHub Release asset. Pass a tag explicitly to override the
+file:
+
+```cmd
+release_github.cmd v0.2.1
+```

@@ -29,7 +29,7 @@ This repository contains the QuPath extension that calls that Python package.
 - QuPath 0.7.0
 - Python 3.12
 - PyTorch installed in that Python environment
-- `ci-deconvolve>=0.2.0`
+- `ci-deconvolve>=0.2.1`
 
 The extension does not include Python, PyTorch, or CIDeconvolve. You install
 those separately, then tell QuPath which Python executable to use.
@@ -40,7 +40,7 @@ Create or activate a Python 3.12 environment, then install CIDeconvolve from
 PyPI:
 
 ```powershell
-python -m pip install "ci-deconvolve>=0.2.0"
+python -m pip install "ci-deconvolve>=0.2.1"
 ```
 
 Install PyTorch using the command recommended for your system at:
@@ -59,7 +59,7 @@ The output should include:
 
 ```text
 CIDECONVOLVE_OK
-ci_deconvolve=0.2.0
+ci_deconvolve=0.2.1
 ```
 
 or a newer version.
@@ -67,9 +67,7 @@ or a newer version.
 ## Install The QuPath Extension
 
 1. Download the extension jar from the
-   [latest GitHub release](https://github.com/Cellular-Imaging-Amsterdam-UMC/qupath-extension-cideconvolve/releases/latest).
-   For version `v0.2.1`, download
-   `qupath-extension-cideconvolve-0.2.1.jar`.
+   [latest GitHub release], download `qupath-extension-cideconvolve-x.x.x.jar`.
 2. Copy the downloaded jar into your QuPath extensions folder.
 3. Restart QuPath.
 4. Open `Edit > Preferences > CIDeconvolve`.
@@ -186,20 +184,4 @@ layouts that QuPath cannot open directly.
 
 Developer/build notes are in [docs/DEVELOPER.md](docs/DEVELOPER.md).
 
-## Releasing
 
-Maintainers can create a GitHub Release with the installable QuPath jar by
-running:
-
-```cmd
-release_github.cmd
-```
-
-The script reads `version.txt`, builds
-`qupath-extension-cideconvolve-0.2.1.jar`, creates the matching Git tag, and
-uploads the jar as a GitHub Release asset. Pass a tag explicitly to override the
-file:
-
-```cmd
-release_github.cmd v0.2.1
-```
