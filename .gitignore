@@ -33,6 +33,7 @@ gradle.properties
 hs_err*.log
 
 # Other
+release_github*
 *.tmp
 *.bak
 *.swp
