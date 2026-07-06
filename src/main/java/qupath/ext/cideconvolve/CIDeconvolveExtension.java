@@ -129,8 +129,8 @@ public class CIDeconvolveExtension implements QuPathExtension {
                         .twoDWfBgScale(1.0)
 
                         // Output extras.
-                        .saveQcMips(true)                   // Save MIP/source MIP side outputs for OME-TIFF
-                        .writeManifest(true)                // Write ci_deconvolve_manifest.json
+                        .saveQcMips(false)                  // Optional MIP/source MIP QC side outputs
+                        .writeManifest(false)               // Optional ci_deconvolve_manifest.json
                         .keepTemporaryInputs(false)         // Keep temporary ROI OME-TIFF exports for debugging
 
                         // Blocking script call. Returns CIDeconvolveResult, adds compatible

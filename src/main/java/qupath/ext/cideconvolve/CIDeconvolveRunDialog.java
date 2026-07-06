@@ -20,6 +20,7 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.stage.FileChooser;
 import javafx.util.StringConverter;
 import qupath.fx.dialogs.Dialogs;
@@ -91,27 +92,28 @@ public class CIDeconvolveRunDialog {
         main.setPadding(new Insets(8));
 
         int row = 0;
-        main.add(createSettingsContent(controls), 0, row++, 4, 1);
-        main.add(createOutputContent(controls), 0, row++, 4, 1);
-        main.add(createRoiContent(controls), 0, row++, 4, 1);
-        addRow(main, row++, "Iterations", controls.iterations);
+        main.add(createRoiContent(controls), 0, row++, 6, 1);
+        addTripleRow(
+                main,
+                row++,
+                "Iterations", controls.iterations,
+                "Convergence", controls.convergence,
+                "Rel. threshold", controls.relThreshold);
         addRow(main, row++, "Start estimate", controls.start);
-        addRow(main, row++, "Device", controls.device);
         addRow(main, row++, "Microscope", controls.microscopeType);
-        addPairRow(main, row++, "NA", controls.na, "Sample RI", controls.sampleRi);
-        addPairRow(main, row++, "Emission wl", controls.emissionWl, "Excitation wl", controls.excitationWl);
-        addRow(main, row++, "Pinhole Airy", controls.pinholeAiry);
-        addPairRow(main, row++, "Pixel XY (um)", controls.pixelSizeXy, "Pixel Z (um)", controls.pixelSizeZ);
-        main.add(controls.overruleMetadata, 1, row++, 3, 1);
+        main.add(createMetadataContent(controls), 0, row++, 6, 1);
+        main.add(controls.overruleMetadata, 1, row++, 5, 1);
+        main.add(createOutputContent(controls), 0, row++, 6, 1);
+        main.add(createSettingsContent(controls), 0, row++, 6, 1);
 
         TitledPane advanced = new TitledPane("Advanced", createAdvancedContent(controls));
         advanced.setExpanded(false);
-        main.add(advanced, 0, row, 4, 1);
+        main.add(advanced, 0, row, 6, 1);
 
         ScrollPane scrollPane = new ScrollPane(main);
         scrollPane.setFitToWidth(true);
-        scrollPane.setPrefViewportWidth(672);
-        scrollPane.setPrefViewportHeight(520);
+        scrollPane.setPrefViewportWidth(720);
+        scrollPane.setPrefViewportHeight(450);
         return scrollPane;
     }
 
@@ -136,7 +138,7 @@ public class CIDeconvolveRunDialog {
                 loadSettings(selected, controls);
         });
 
-        HBox row = new HBox(6, new Label("Settings:"), controls.savedSettings, restore, save, load);
+        HBox row = new HBox(6, new Label("Settings"), controls.savedSettings, restore, save, load);
         HBox.setHgrow(controls.savedSettings, Priority.ALWAYS);
         return row;
     }
@@ -166,28 +168,36 @@ public class CIDeconvolveRunDialog {
         return row;
     }
 
+    private Node createMetadataContent(Controls controls) {
+        GridPane grid = new GridPane();
+        grid.setHgap(8);
+        grid.setVgap(6);
+        grid.getColumnConstraints().setAll(
+                fixedColumn(118),
+                growingColumn(150),
+                fixedColumn(118),
+                growingColumn(150));
+        addCompactPairRow(grid, 0, "NA", controls.na, "Pinhole Airy", controls.pinholeAiry);
+        addCompactPairRow(grid, 1, "Immersion RI", controls.refractiveIndex, "Sample RI", controls.sampleRi);
+        addCompactPairRow(grid, 2, "Excitation wl", controls.excitationWl, "Emission wl", controls.emissionWl);
+        addCompactPairRow(grid, 3, "PixelSize XY (um)", controls.pixelSizeXy, "PixelSize Z (um)", controls.pixelSizeZ);
+        return grid;
+    }
+
     private Node createAdvancedContent(Controls controls) {
         GridPane grid = new GridPane();
         grid.setHgap(8);
         grid.setVgap(6);
         grid.setPadding(new Insets(8, 0, 0, 0));
         int row = 0;
-        addRow(grid, row++, "Log output", controls.logTarget);
-        grid.add(controls.saveQcMips, 1, row++, 3, 1);
-        grid.add(controls.writeManifest, 1, row++, 3, 1);
-        grid.add(controls.keepTemporaryInputs, 1, row++, 3, 1);
-        addRow(grid, row++, "Background", controls.background);
-        addRow(grid, row++, "Offset", controls.offset);
-        addRow(grid, row++, "Damping", controls.damping);
-        addRow(grid, row++, "Prefilter sigma", controls.prefilterSigma);
-        addRow(grid, row++, "Convergence", controls.convergence);
-        addRow(grid, row++, "Rel. threshold", controls.relThreshold);
-        addRow(grid, row++, "Check every", controls.checkEvery);
-        addRow(grid, row++, "Immersion RI", controls.refractiveIndex);
-        addRow(grid, row++, "2D mode", controls.twoDMode);
-        addRow(grid, row++, "2D WF strength", controls.twoDWfAggressiveness);
-        addRow(grid, row++, "2D WF bg radius", controls.twoDWfBgRadiusUm);
-        addRow(grid, row, "2D WF bg scale", controls.twoDWfBgScale);
+        HBox checkboxes = new HBox(16, controls.saveQcMips, controls.writeManifest, controls.keepTemporaryInputs);
+        grid.add(checkboxes, 0, row++, 4, 1);
+        addCompactPairRow(grid, row++, "Log output", controls.logTarget, "Device", controls.device);
+        addCompactPairRow(grid, row++, "Check every", controls.checkEvery, "Background", controls.background);
+        addCompactPairRow(grid, row++, "Offset", controls.offset, "Damping", controls.damping);
+        addCompactPairRow(grid, row++, "Prefilter sigma", controls.prefilterSigma, "2D mode", controls.twoDMode);
+        addCompactPairRow(grid, row++, "2D WF strength", controls.twoDWfAggressiveness, "2D WF bg radius", controls.twoDWfBgRadiusUm);
+        addCompactPairRow(grid, row, "2D WF bg scale", controls.twoDWfBgScale, "", new Label(""));
         return grid;
     }
 
@@ -195,11 +205,24 @@ public class CIDeconvolveRunDialog {
         Label labelNode = new Label(label);
         labelNode.setLabelFor(control);
         grid.add(labelNode, 0, row);
-        grid.add(control, 1, row, 3, 1);
+        grid.add(control, 1, row, 5, 1);
         GridPane.setHgrow(control, Priority.ALWAYS);
     }
 
     private static void addPairRow(GridPane grid, int row, String label1, Node control1, String label2, Node control2) {
+        Label labelNode1 = new Label(label1);
+        labelNode1.setLabelFor(control1);
+        Label labelNode2 = new Label(label2);
+        labelNode2.setLabelFor(control2);
+        grid.add(labelNode1, 0, row);
+        grid.add(control1, 1, row, 2, 1);
+        grid.add(labelNode2, 3, row);
+        grid.add(control2, 4, row, 2, 1);
+        GridPane.setHgrow(control1, Priority.ALWAYS);
+        GridPane.setHgrow(control2, Priority.ALWAYS);
+    }
+
+    private static void addCompactPairRow(GridPane grid, int row, String label1, Node control1, String label2, Node control2) {
         Label labelNode1 = new Label(label1);
         labelNode1.setLabelFor(control1);
         Label labelNode2 = new Label(label2);
@@ -210,6 +233,47 @@ public class CIDeconvolveRunDialog {
         grid.add(control2, 3, row);
         GridPane.setHgrow(control1, Priority.ALWAYS);
         GridPane.setHgrow(control2, Priority.ALWAYS);
+    }
+
+    private static ColumnConstraints fixedColumn(double width) {
+        ColumnConstraints constraints = new ColumnConstraints();
+        constraints.setMinWidth(width);
+        constraints.setPrefWidth(width);
+        return constraints;
+    }
+
+    private static ColumnConstraints growingColumn(double prefWidth) {
+        ColumnConstraints constraints = new ColumnConstraints();
+        constraints.setPrefWidth(prefWidth);
+        constraints.setHgrow(Priority.ALWAYS);
+        return constraints;
+    }
+
+    private static void addTripleRow(
+            GridPane grid,
+            int row,
+            String label1,
+            Node control1,
+            String label2,
+            Node control2,
+            String label3,
+            Node control3
+    ) {
+        Label labelNode1 = new Label(label1);
+        labelNode1.setLabelFor(control1);
+        Label labelNode2 = new Label(label2);
+        labelNode2.setLabelFor(control2);
+        Label labelNode3 = new Label(label3);
+        labelNode3.setLabelFor(control3);
+        grid.add(labelNode1, 0, row);
+        grid.add(control1, 1, row);
+        grid.add(labelNode2, 2, row);
+        grid.add(control2, 3, row);
+        grid.add(labelNode3, 4, row);
+        grid.add(control3, 5, row);
+        GridPane.setHgrow(control1, Priority.ALWAYS);
+        GridPane.setHgrow(control2, Priority.ALWAYS);
+        GridPane.setHgrow(control3, Priority.ALWAYS);
     }
 
     private CIDeconvolveRunRequest readRequest(Controls controls) {
@@ -279,7 +343,7 @@ public class CIDeconvolveRunDialog {
         controls.damping.setText(parameters.getDamping());
         controls.prefilterSigma.setText(Double.toString(parameters.getPrefilterSigma()));
         controls.start.setValue(parameters.getStart());
-        controls.convergence.setValue(parameters.getConvergence());
+        controls.convergence.setValue("auto".equals(parameters.getConvergence()) ? "fixed" : parameters.getConvergence());
         controls.relThreshold.setText(Double.toString(parameters.getRelThreshold()));
         controls.checkEvery.getValueFactory().setValue(parameters.getCheckEvery());
         controls.refractiveIndex.setText(Double.toString(parameters.getRefractiveIndex()));
@@ -468,7 +532,7 @@ public class CIDeconvolveRunDialog {
         private final TextField prefilterSigma = textField("0.0");
         private final ComboBox<String> start = combo("auto", "auto", "flat", "percentile_flat",
                 "observed", "observed_bgsub", "lowpass", "lowpass_bgsub", "hybrid");
-        private final ComboBox<String> convergence = combo("auto", "auto", "fixed", "none");
+        private final ComboBox<String> convergence = combo("fixed", "fixed", "none");
         private final TextField relThreshold = textField("0.005");
         private final Spinner<Integer> checkEvery = new Spinner<>(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10_000, 5));
@@ -489,8 +553,14 @@ public class CIDeconvolveRunDialog {
             }
             iterations.setEditable(true);
             checkEvery.setEditable(true);
-            saveQcMips.setSelected(true);
-            writeManifest.setSelected(true);
+            iterations.setPrefWidth(116);
+            iterations.setMaxWidth(116);
+            convergence.setPrefWidth(145);
+            convergence.setMaxWidth(145);
+            relThreshold.setPrefWidth(120);
+            relThreshold.setMaxWidth(120);
+            saveQcMips.setSelected(false);
+            writeManifest.setSelected(false);
             annotationClass.getItems().setAll(annotationClasses);
             annotationClass.setPromptText("Choose class");
             annotationClass.setMaxWidth(Double.MAX_VALUE);

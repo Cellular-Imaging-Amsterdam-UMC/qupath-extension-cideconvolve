@@ -45,8 +45,8 @@ public class CIDeconvolveParameters {
     private double twoDWfBgScale = 1.0;
     private boolean createProjection = false;
     private boolean verbose = true;
-    private boolean saveQcMips = true;
-    private boolean writeManifest = true;
+    private boolean saveQcMips = false;
+    private boolean writeManifest = false;
     private boolean keepTemporaryInputs = false;
 
     public void normalize() {
