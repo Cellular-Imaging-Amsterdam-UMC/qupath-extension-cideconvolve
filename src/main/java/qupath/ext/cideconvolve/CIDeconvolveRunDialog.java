@@ -99,6 +99,12 @@ public class CIDeconvolveRunDialog {
                 "Iterations", controls.iterations,
                 "Convergence", controls.convergence,
                 "Rel. threshold", controls.relThreshold);
+        addTripleRow(
+                main,
+                row++,
+                "T start", controls.timeStart,
+                "T stop", controls.timeStop,
+                "T step", controls.timeStep);
         addRow(main, row++, "Start estimate", controls.start);
         addRow(main, row++, "Microscope", controls.microscopeType);
         main.add(createMetadataContent(controls), 0, row++, 6, 1);
@@ -194,10 +200,9 @@ public class CIDeconvolveRunDialog {
         grid.add(checkboxes, 0, row++, 4, 1);
         addCompactPairRow(grid, row++, "Log output", controls.logTarget, "Device", controls.device);
         addCompactPairRow(grid, row++, "Check every", controls.checkEvery, "Background", controls.background);
-        addCompactPairRow(grid, row++, "Offset", controls.offset, "Damping", controls.damping);
-        addCompactPairRow(grid, row++, "Prefilter sigma", controls.prefilterSigma, "2D mode", controls.twoDMode);
-        addCompactPairRow(grid, row++, "2D WF strength", controls.twoDWfAggressiveness, "2D WF bg radius", controls.twoDWfBgRadiusUm);
-        addCompactPairRow(grid, row, "2D WF bg scale", controls.twoDWfBgScale, "", new Label(""));
+        addCompactPairRow(grid, row++, "Offset", controls.offset, "Prefilter sigma", controls.prefilterSigma);
+        addCompactPairRow(grid, row++, "2D mode", controls.twoDMode, "2D WF strength", controls.twoDWfAggressiveness);
+        addCompactPairRow(grid, row++, "2D WF bg radius", controls.twoDWfBgRadiusUm, "2D WF bg scale", controls.twoDWfBgScale);
         return grid;
     }
 
@@ -292,6 +297,9 @@ public class CIDeconvolveRunDialog {
         parameters.setLogTarget(controls.logTarget.getValue());
         parameters.setCreateProjection(controls.createProjection.isSelected());
         parameters.setIterations(controls.iterations.getValue());
+        parameters.setTimeStart(controls.timeStart.getValue());
+        parameters.setTimeStop(controls.timeStop.getValue());
+        parameters.setTimeStep(controls.timeStep.getValue());
         parameters.setDevice(controls.device.getValue());
         parameters.setMicroscopeType(controls.microscopeType.getValue());
         parameters.setNa(parseDouble(controls.na, "NA"));
@@ -303,7 +311,6 @@ public class CIDeconvolveRunDialog {
         parameters.setOverruleMetadata(controls.overruleMetadata.isSelected());
         parameters.setBackground(text(controls.background, "Background"));
         parameters.setOffset(text(controls.offset, "Offset"));
-        parameters.setDamping(text(controls.damping, "Damping"));
         parameters.setPrefilterSigma(parseDouble(controls.prefilterSigma, "Prefilter sigma"));
         parameters.setStart(controls.start.getValue());
         parameters.setConvergence(controls.convergence.getValue());
@@ -329,6 +336,9 @@ public class CIDeconvolveRunDialog {
         controls.logTarget.setValue(parameters.getLogTarget());
         controls.createProjection.setSelected(parameters.isCreateProjection());
         controls.iterations.getValueFactory().setValue(parameters.getIterations());
+        controls.timeStart.getValueFactory().setValue(parameters.getTimeStart());
+        controls.timeStop.getValueFactory().setValue(parameters.getTimeStop());
+        controls.timeStep.getValueFactory().setValue(parameters.getTimeStep());
         controls.device.setValue(parameters.getDevice());
         controls.microscopeType.setValue(parameters.getMicroscopeType());
         controls.na.setText(Double.toString(parameters.getNa()));
@@ -340,7 +350,6 @@ public class CIDeconvolveRunDialog {
         controls.overruleMetadata.setSelected(parameters.isOverruleMetadata());
         controls.background.setText(parameters.getBackground());
         controls.offset.setText(parameters.getOffset());
-        controls.damping.setText(parameters.getDamping());
         controls.prefilterSigma.setText(Double.toString(parameters.getPrefilterSigma()));
         controls.start.setValue(parameters.getStart());
         controls.convergence.setValue("auto".equals(parameters.getConvergence()) ? "fixed" : parameters.getConvergence());
@@ -517,6 +526,12 @@ public class CIDeconvolveRunDialog {
         private final CheckBox keepTemporaryInputs = new CheckBox("Keep temporary exported inputs");
         private final Spinner<Integer> iterations = new Spinner<>(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10_000, 40));
+        private final Spinner<Integer> timeStart = new Spinner<>(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1_000_000, 1));
+        private final Spinner<Integer> timeStop = new Spinner<>(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 1_000_000, 0));
+        private final Spinner<Integer> timeStep = new Spinner<>(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1_000_000, 1));
         private final ComboBox<String> device = combo("auto", "auto", "cpu", "cuda");
         private final ComboBox<String> microscopeType = combo("confocal", "confocal", "widefield");
         private final TextField na = textField("1.4");
@@ -528,7 +543,6 @@ public class CIDeconvolveRunDialog {
         private final CheckBox overruleMetadata = new CheckBox("Overrule image metadata");
         private final TextField background = textField("auto");
         private final TextField offset = textField("auto");
-        private final TextField damping = textField("none");
         private final TextField prefilterSigma = textField("0.0");
         private final ComboBox<String> start = combo("auto", "auto", "flat", "percentile_flat",
                 "observed", "observed_bgsub", "lowpass", "lowpass_bgsub", "hybrid");
@@ -552,9 +566,18 @@ public class CIDeconvolveRunDialog {
             } catch (IOException ignored) {
             }
             iterations.setEditable(true);
+            timeStart.setEditable(true);
+            timeStop.setEditable(true);
+            timeStep.setEditable(true);
             checkEvery.setEditable(true);
             iterations.setPrefWidth(116);
             iterations.setMaxWidth(116);
+            timeStart.setPrefWidth(116);
+            timeStart.setMaxWidth(116);
+            timeStop.setPrefWidth(116);
+            timeStop.setMaxWidth(116);
+            timeStep.setPrefWidth(116);
+            timeStep.setMaxWidth(116);
             convergence.setPrefWidth(145);
             convergence.setMaxWidth(145);
             relThreshold.setPrefWidth(120);

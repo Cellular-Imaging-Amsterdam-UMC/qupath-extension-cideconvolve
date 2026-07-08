@@ -3,7 +3,7 @@ package qupath.ext.cideconvolve;
 import java.util.List;
 
 /**
- * User-facing parameters supported by ci-deconvolve 0.2.0.
+ * User-facing parameters supported by ci-deconvolve 0.3.0.
  */
 public class CIDeconvolveParameters {
 
@@ -20,10 +20,12 @@ public class CIDeconvolveParameters {
     private String annotationClass = "";
     private String logTarget = LOG_DIALOG;
     private int iterations = 40;
+    private int timeStart = 1;
+    private int timeStop = 0;
+    private int timeStep = 1;
     private String device = "auto";
     private String background = "auto";
     private String offset = "auto";
-    private String damping = "none";
     private double prefilterSigma = 0.0;
     private String start = "auto";
     private String convergence = "auto";
@@ -61,6 +63,12 @@ public class CIDeconvolveParameters {
             logTarget = LOG_DIALOG;
         if (iterations < 1)
             iterations = 40;
+        if (timeStart < 1)
+            timeStart = 1;
+        if (timeStop < 0)
+            timeStop = 0;
+        if (timeStep < 1)
+            timeStep = 1;
         if (!List.of("auto", "cpu", "cuda").contains(device))
             device = "auto";
         if (!List.of("confocal", "widefield").contains(microscopeType))
@@ -79,8 +87,6 @@ public class CIDeconvolveParameters {
             background = "auto";
         if (offset == null || offset.isBlank())
             offset = "auto";
-        if (damping == null || damping.isBlank())
-            damping = "none";
         if (emissionWavelength == null || emissionWavelength.isBlank())
             emissionWavelength = "520";
         if (excitationWavelength == null || excitationWavelength.isBlank())
@@ -129,6 +135,30 @@ public class CIDeconvolveParameters {
         this.iterations = iterations;
     }
 
+    public int getTimeStart() {
+        return timeStart;
+    }
+
+    public void setTimeStart(int timeStart) {
+        this.timeStart = timeStart;
+    }
+
+    public int getTimeStop() {
+        return timeStop;
+    }
+
+    public void setTimeStop(int timeStop) {
+        this.timeStop = timeStop;
+    }
+
+    public int getTimeStep() {
+        return timeStep;
+    }
+
+    public void setTimeStep(int timeStep) {
+        this.timeStep = timeStep;
+    }
+
     public String getDevice() {
         return device;
     }
@@ -151,14 +181,6 @@ public class CIDeconvolveParameters {
 
     public void setOffset(String offset) {
         this.offset = offset;
-    }
-
-    public String getDamping() {
-        return damping;
-    }
-
-    public void setDamping(String damping) {
-        this.damping = damping;
     }
 
     public double getPrefilterSigma() {

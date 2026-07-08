@@ -96,6 +96,9 @@ public class CIDeconvolveExtension implements QuPathExtension {
                         // Basic CLI controls.
                         .createProjection(false)            // true writes max-Z output for 3D data
                         .iterations(40)                     // Richardson-Lucy iterations
+                        .timeStart(1)                       // First T frame, 1-based
+                        .timeStop(0)                        // 0 = final frame
+                        .timeStep(1)                        // Save every Nth T frame
                         .device('auto')                     // auto, cpu, cuda
                         .verbose(true)                      // include Python/core progress logs
 
@@ -115,7 +118,6 @@ public class CIDeconvolveExtension implements QuPathExtension {
                         // Stabilization and convergence controls.
                         .background('auto')                 // auto or numeric
                         .offset('auto')                     // auto or numeric
-                        .damping('none')                    // none/0 or numeric
                         .prefilterSigma(0.0)                // Gaussian prefilter sigma
                         .start('auto')                      // auto, flat, observed, hybrid, etc.
                         .convergence('auto')                // auto, fixed, none

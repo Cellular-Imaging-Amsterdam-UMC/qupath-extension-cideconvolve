@@ -85,6 +85,21 @@ public final class CIDeconvolve {
             return this;
         }
 
+        public Builder timeStart(int timeStart) {
+            parameters.setTimeStart(timeStart);
+            return this;
+        }
+
+        public Builder timeStop(int timeStop) {
+            parameters.setTimeStop(timeStop);
+            return this;
+        }
+
+        public Builder timeStep(int timeStep) {
+            parameters.setTimeStep(timeStep);
+            return this;
+        }
+
         public Builder device(String device) {
             parameters.setDevice(device);
             return this;
@@ -137,11 +152,6 @@ public final class CIDeconvolve {
 
         public Builder offset(String offset) {
             parameters.setOffset(offset);
-            return this;
-        }
-
-        public Builder damping(String damping) {
-            parameters.setDamping(damping);
             return this;
         }
 

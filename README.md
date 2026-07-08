@@ -29,7 +29,7 @@ This repository contains the QuPath extension that calls that Python package.
 - QuPath 0.7.0
 - Python 3.12
 - PyTorch installed in that Python environment
-- `ci-deconvolve>=0.2.1`
+- `ci-deconvolve>=0.3.0`
 
 The extension does not include Python, PyTorch, or CIDeconvolve. You install
 those separately, then tell QuPath which Python executable to use.
@@ -40,7 +40,7 @@ Create or activate a Python 3.12 environment, then install CIDeconvolve from
 PyPI:
 
 ```powershell
-python -m pip install "ci-deconvolve>=0.2.1"
+python -m pip install "ci-deconvolve>=0.3.0"
 ```
 
 Install PyTorch using the command recommended for your system at:
@@ -59,7 +59,7 @@ The output should include:
 
 ```text
 CIDECONVOLVE_OK
-ci_deconvolve=0.2.1
+ci_deconvolve=0.3.0
 ```
 
 or a newer version.
@@ -176,7 +176,7 @@ If validation fails, check:
 - The configured Python executable is the Python from your intended environment.
 - `python -m ci_deconvolve.cli --validate-env` works in a terminal.
 - PyTorch is installed and can import.
-- `ci-deconvolve` is version `0.2.0` or newer.
+- `ci-deconvolve` is version `0.3.0` or newer.
 
 If an OME-Zarr output does not open automatically, inspect the log. QuPath 0.7
 requires compatible NGFF/Zarr metadata; older Python package versions may write

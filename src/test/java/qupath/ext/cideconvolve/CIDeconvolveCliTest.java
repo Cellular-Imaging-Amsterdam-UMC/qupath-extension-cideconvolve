@@ -48,6 +48,9 @@ class CIDeconvolveCliTest {
         CIDeconvolveParameters parameters = new CIDeconvolveParameters();
         parameters.setOutputFormat(CIDeconvolveParameters.FORMAT_OME_ZARR);
         parameters.setIterations(12);
+        parameters.setTimeStart(2);
+        parameters.setTimeStop(8);
+        parameters.setTimeStep(3);
         parameters.setDevice("cpu");
         parameters.setOverruleMetadata(true);
         parameters.setCreateProjection(true);
@@ -66,7 +69,11 @@ class CIDeconvolveCliTest {
         assertFlagValue(command, "--output-format", "ome-zarr");
         assertFlagValue(command, "--projection", "max-z");
         assertFlagValue(command, "--iterations", "12");
+        assertFlagValue(command, "--t-start", "2");
+        assertFlagValue(command, "--t-stop", "8");
+        assertFlagValue(command, "--t-step", "3");
         assertFlagValue(command, "--device", "cpu");
+        assertFalse(command.contains("--damping"));
         assertTrue(command.contains("--overrule-metadata"));
         assertTrue(command.contains("--verbose"));
     }
@@ -89,10 +96,10 @@ class CIDeconvolveCliTest {
 
     @Test
     void testValidationResultRequiresMarkerAndSuccessCode() {
-        assertTrue(new PythonValidationResult(0, "CIDECONVOLVE_OK\nci_deconvolve=0.2.0\npython=3.12").isValid());
-        assertFalse(new PythonValidationResult(1, "CIDECONVOLVE_OK\nci_deconvolve=0.2.0").isValid());
+        assertTrue(new PythonValidationResult(0, "CIDECONVOLVE_OK\nci_deconvolve=0.3.0\npython=3.12").isValid());
+        assertFalse(new PythonValidationResult(1, "CIDECONVOLVE_OK\nci_deconvolve=0.3.0").isValid());
         assertFalse(new PythonValidationResult(0, "missing marker").isValid());
-        assertFalse(new PythonValidationResult(0, "CIDECONVOLVE_OK\nci_deconvolve=0.1.0").isValid());
+        assertFalse(new PythonValidationResult(0, "CIDECONVOLVE_OK\nci_deconvolve=0.2.0").isValid());
     }
 
     @Test
@@ -158,6 +165,9 @@ class CIDeconvolveCliTest {
         parameters.setRoiMode(CIDeconvolveParameters.ROI_ANNOTATION_CLASS);
         parameters.setAnnotationClass("cidecon");
         parameters.setIterations(17);
+        parameters.setTimeStart(2);
+        parameters.setTimeStop(4);
+        parameters.setTimeStep(2);
         parameters.setCreateProjection(true);
 
         Path saved = settingsDir.resolve("my-settings.json");
@@ -170,6 +180,9 @@ class CIDeconvolveCliTest {
         assertEquals(CIDeconvolveParameters.ROI_ANNOTATION_CLASS, loaded.getRoiMode());
         assertEquals("cidecon", loaded.getAnnotationClass());
         assertEquals(17, loaded.getIterations());
+        assertEquals(2, loaded.getTimeStart());
+        assertEquals(4, loaded.getTimeStop());
+        assertEquals(2, loaded.getTimeStep());
         assertTrue(loaded.isCreateProjection());
         assertEquals(List.of(saved), CIDeconvolveSettingsStore.listSavedSettings(settingsDir));
     }
