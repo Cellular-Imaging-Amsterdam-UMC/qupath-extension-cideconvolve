@@ -201,8 +201,10 @@ public class CIDeconvolveRunDialog {
         addCompactPairRow(grid, row++, "Log output", controls.logTarget, "Device", controls.device);
         addCompactPairRow(grid, row++, "Check every", controls.checkEvery, "Background", controls.background);
         addCompactPairRow(grid, row++, "Offset", controls.offset, "Prefilter sigma", controls.prefilterSigma);
-        addCompactPairRow(grid, row++, "2D mode", controls.twoDMode, "2D WF strength", controls.twoDWfAggressiveness);
-        addCompactPairRow(grid, row++, "2D WF bg radius", controls.twoDWfBgRadiusUm, "2D WF bg scale", controls.twoDWfBgScale);
+        addCompactPairRow(grid, row++, "SNR mode", controls.snrMode, "SNR value", controls.snrValue);
+        addCompactPairRow(grid, row++, "Acuity", controls.acuity, "2D mode", controls.twoDMode);
+        addCompactPairRow(grid, row++, "2D WF strength", controls.twoDWfAggressiveness, "2D WF bg radius", controls.twoDWfBgRadiusUm);
+        addCompactPairRow(grid, row++, "2D WF bg scale", controls.twoDWfBgScale, "", new Label(""));
         return grid;
     }
 
@@ -312,6 +314,9 @@ public class CIDeconvolveRunDialog {
         parameters.setBackground(text(controls.background, "Background"));
         parameters.setOffset(text(controls.offset, "Offset"));
         parameters.setPrefilterSigma(parseDouble(controls.prefilterSigma, "Prefilter sigma"));
+        parameters.setSnrMode(controls.snrMode.getValue());
+        parameters.setSnrValue(parseDouble(controls.snrValue, "SNR value"));
+        parameters.setAcuity(parseDouble(controls.acuity, "Acuity"));
         parameters.setStart(controls.start.getValue());
         parameters.setConvergence(controls.convergence.getValue());
         parameters.setRelThreshold(parseDouble(controls.relThreshold, "Relative threshold"));
@@ -351,6 +356,9 @@ public class CIDeconvolveRunDialog {
         controls.background.setText(parameters.getBackground());
         controls.offset.setText(parameters.getOffset());
         controls.prefilterSigma.setText(Double.toString(parameters.getPrefilterSigma()));
+        controls.snrMode.setValue(parameters.getSnrMode());
+        controls.snrValue.setText(Double.toString(parameters.getSnrValue()));
+        controls.acuity.setText(Double.toString(parameters.getAcuity()));
         controls.start.setValue(parameters.getStart());
         controls.convergence.setValue("auto".equals(parameters.getConvergence()) ? "fixed" : parameters.getConvergence());
         controls.relThreshold.setText(Double.toString(parameters.getRelThreshold()));
@@ -544,6 +552,9 @@ public class CIDeconvolveRunDialog {
         private final TextField background = textField("auto");
         private final TextField offset = textField("auto");
         private final TextField prefilterSigma = textField("0.0");
+        private final ComboBox<String> snrMode = combo("none", "none", "auto", "manual");
+        private final TextField snrValue = textField("4.0");
+        private final TextField acuity = textField("0.0");
         private final ComboBox<String> start = combo("auto", "auto", "flat", "percentile_flat",
                 "observed", "observed_bgsub", "lowpass", "lowpass_bgsub", "hybrid");
         private final ComboBox<String> convergence = combo("fixed", "fixed", "none");

@@ -2,7 +2,7 @@ package qupath.ext.cideconvolve;
 
 public class PythonValidationResult {
 
-    private static final String MIN_CIDECONVOLVE_VERSION = "0.3.0";
+    private static final String MIN_CIDECONVOLVE_VERSION = "3.1.0";
 
     private final int exitCode;
     private final String output;

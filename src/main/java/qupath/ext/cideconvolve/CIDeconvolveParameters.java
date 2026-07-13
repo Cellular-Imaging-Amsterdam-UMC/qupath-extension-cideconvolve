@@ -3,7 +3,7 @@ package qupath.ext.cideconvolve;
 import java.util.List;
 
 /**
- * User-facing parameters supported by ci-deconvolve 0.3.0.
+ * User-facing parameters supported by ci-deconvolve 3.1.0.
  */
 public class CIDeconvolveParameters {
 
@@ -14,6 +14,9 @@ public class CIDeconvolveParameters {
     public static final String ROI_ANNOTATION_CLASS = "annotation_class";
     public static final String LOG_DIALOG = "dialog";
     public static final String LOG_QUPATH = "qupath";
+    public static final String SNR_NONE = "none";
+    public static final String SNR_AUTO = "auto";
+    public static final String SNR_MANUAL = "manual";
 
     private String outputFormat = FORMAT_OME_ZARR;
     private String roiMode = ROI_FULL_IMAGE;
@@ -27,6 +30,9 @@ public class CIDeconvolveParameters {
     private String background = "auto";
     private String offset = "auto";
     private double prefilterSigma = 0.0;
+    private String snrMode = SNR_NONE;
+    private double snrValue = 4.0;
+    private double acuity = 0.0;
     private String start = "auto";
     private String convergence = "auto";
     private double relThreshold = 0.005;
@@ -87,6 +93,13 @@ public class CIDeconvolveParameters {
             background = "auto";
         if (offset == null || offset.isBlank())
             offset = "auto";
+        if (!List.of(SNR_NONE, SNR_AUTO, SNR_MANUAL).contains(snrMode))
+            snrMode = SNR_NONE;
+        if (!Double.isFinite(snrValue) || snrValue <= 0.0)
+            snrValue = 4.0;
+        if (!Double.isFinite(acuity))
+            acuity = 0.0;
+        acuity = Math.max(-100.0, Math.min(100.0, acuity));
         if (emissionWavelength == null || emissionWavelength.isBlank())
             emissionWavelength = "520";
         if (excitationWavelength == null || excitationWavelength.isBlank())
@@ -190,6 +203,13 @@ public class CIDeconvolveParameters {
     public void setPrefilterSigma(double prefilterSigma) {
         this.prefilterSigma = prefilterSigma;
     }
+
+    public String getSnrMode() { return snrMode; }
+    public void setSnrMode(String snrMode) { this.snrMode = snrMode; }
+    public double getSnrValue() { return snrValue; }
+    public void setSnrValue(double snrValue) { this.snrValue = snrValue; }
+    public double getAcuity() { return acuity; }
+    public void setAcuity(double acuity) { this.acuity = acuity; }
 
     public String getStart() {
         return start;

@@ -5,14 +5,14 @@ QuPath CIDeconvolve extension.
 
 ## Project
 
-The extension runs `ci-deconvolve>=0.3.0` from an existing Python 3.12
+The extension runs `ci-deconvolve>=3.1.0` from an existing Python 3.12
 environment and opens generated OME output back in QuPath.
 
 ## Requirements
 
 - QuPath 0.7.0
 - Eclipse Temurin JDK 25 for the current local build setup
-- Python 3.12 with `ci-deconvolve>=0.3.0` and PyTorch installed
+- Python 3.12 with `ci-deconvolve>=3.1.0` and PyTorch installed
 
 The extension does not bundle Python, PyTorch, or CIDeconvolve.
 
@@ -55,7 +55,7 @@ C:\rahoebe\QuPath7-StandAlone\PythonEnvs\cellpose3_spotiflow\python.exe -m ci_de
 ```
 
 Expected output starts with `CIDECONVOLVE_OK` and reports
-`ci_deconvolve=0.3.0` or newer.
+`ci_deconvolve=3.1.0` or newer.
 
 ## Behavior Notes
 
@@ -100,10 +100,10 @@ release_github.cmd
 ```
 
 The script reads `version.txt`, builds
-`qupath-extension-cideconvolve-0.3.0.jar`, creates the matching Git tag, and
+`qupath-extension-cideconvolve-0.4.0.jar`, creates the matching Git tag, and
 uploads the jar as a GitHub Release asset. Pass a tag explicitly to override the
 file:
 
 ```cmd
-release_github.cmd v0.3.0
+release_github.cmd v0.4.0
 ```

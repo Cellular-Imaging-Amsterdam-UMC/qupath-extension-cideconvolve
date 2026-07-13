@@ -62,6 +62,10 @@ public final class CIDeconvolveCli {
         command.add(parameters.getOffset());
         command.add("--prefilter-sigma");
         command.add(Double.toString(parameters.getPrefilterSigma()));
+        command.add("--snr");
+        command.add(snrArgument(parameters));
+        command.add("--acuity");
+        command.add(Double.toString(parameters.getAcuity()));
         command.add("--start");
         command.add(parameters.getStart());
         command.add("--convergence");
@@ -105,6 +109,14 @@ public final class CIDeconvolveCli {
         if (parameters.isVerbose())
             command.add("--verbose");
         return command;
+    }
+
+    private static String snrArgument(CIDeconvolveParameters parameters) {
+        if (CIDeconvolveParameters.SNR_AUTO.equals(parameters.getSnrMode()))
+            return "auto";
+        if (CIDeconvolveParameters.SNR_MANUAL.equals(parameters.getSnrMode()))
+            return Double.toString(parameters.getSnrValue());
+        return "off";
     }
 
     public static boolean isSupportedDirectInput(Path path) {

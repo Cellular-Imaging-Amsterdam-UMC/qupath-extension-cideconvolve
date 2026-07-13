@@ -160,6 +160,27 @@ public final class CIDeconvolve {
             return this;
         }
 
+        public Builder snrNone() {
+            parameters.setSnrMode(CIDeconvolveParameters.SNR_NONE);
+            return this;
+        }
+
+        public Builder snrAuto() {
+            parameters.setSnrMode(CIDeconvolveParameters.SNR_AUTO);
+            return this;
+        }
+
+        public Builder snr(double snr) {
+            parameters.setSnrMode(CIDeconvolveParameters.SNR_MANUAL);
+            parameters.setSnrValue(snr);
+            return this;
+        }
+
+        public Builder acuity(double acuity) {
+            parameters.setAcuity(acuity);
+            return this;
+        }
+
         public Builder start(String start) {
             parameters.setStart(start);
             return this;
