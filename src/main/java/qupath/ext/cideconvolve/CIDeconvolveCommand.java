@@ -20,6 +20,7 @@ import qupath.lib.common.GeneralTools;
 import qupath.lib.gui.QuPathGUI;
 import qupath.lib.images.ImageData;
 import qupath.lib.images.servers.CroppedImageServer;
+import qupath.lib.images.servers.ImageChannel;
 import qupath.lib.images.servers.ImageServer;
 import qupath.lib.images.servers.ImageServers;
 import qupath.lib.images.servers.ServerTools;
@@ -85,7 +86,7 @@ public class CIDeconvolveCommand {
         CIDeconvolvePrefs.defaultOutputFormatProperty().set(request.get().getParameters().getOutputFormat());
 
         RunLog log = createRunLog(request.get().getParameters());
-        Task<Void> task = createRunTask(imageData, python, request.get(), getActiveImageType(), log);
+        Task<Void> task = createRunTask(imageData, python, request.get(), OutputDisplay.from(imageData), log);
         runningTask = task;
         configureCancel(log, task);
         new Thread(task, "cideconvolve-run").start();
@@ -107,7 +108,7 @@ public class CIDeconvolveCommand {
         CIDeconvolveRunRequest request = new CIDeconvolveRunRequest(outputDirectory, parameters);
         CIDeconvolvePrefs.defaultOutputFormatProperty().set(parameters.getOutputFormat());
         RunLog log = createRunLog(parameters);
-        Task<Void> task = createRunTask(imageData, python, request, getActiveImageType(), log);
+        Task<Void> task = createRunTask(imageData, python, request, OutputDisplay.from(imageData), log);
         runningTask = task;
         configureCancel(log, task);
         new Thread(task, "cideconvolve-run").start();
@@ -141,7 +142,7 @@ public class CIDeconvolveCommand {
         ImageData<BufferedImage> imageData = getActiveImageData();
         if (imageData == null || imageData.getServer() == null)
             throw new IllegalStateException("No active image is available.");
-        ImageData.ImageType imageType = getActiveImageType();
+        var display = OutputDisplay.from(imageData);
         Path python = getPythonExecutable();
         if (python == null)
             throw new IllegalStateException("CIDeconvolve Python executable is not configured.");
@@ -151,7 +152,7 @@ public class CIDeconvolveCommand {
         try {
             CIDeconvolveResult result = executeRun(imageData, python, request, log, cancelled::get);
             if (result.getStatus() == CIDeconvolveResult.Status.SUCCESS)
-                openOutputsOnFxAndWait(result.getOutputPaths(), outputDirectory, imageType, log);
+                openOutputsOnFxAndWait(result.getOutputPaths(), outputDirectory, display, log);
             return new CIDeconvolveResult(
                     result.getStatus(),
                     result.getInputPaths(),
@@ -258,7 +259,7 @@ public class CIDeconvolveCommand {
             ImageData<BufferedImage> imageData,
             Path python,
             CIDeconvolveRunRequest request,
-            ImageData.ImageType imageType,
+            OutputDisplay display,
             RunLog log
     ) {
         return new Task<>() {
@@ -266,7 +267,7 @@ public class CIDeconvolveCommand {
             protected Void call() throws Exception {
                 CIDeconvolveResult result = executeRun(imageData, python, request, log, this::isCancelled);
                 if (result.getStatus() == CIDeconvolveResult.Status.SUCCESS)
-                    Platform.runLater(() -> openOutputs(result.getOutputPaths(), request.getOutputDirectory(), imageType, log));
+                    Platform.runLater(() -> openOutputs(result.getOutputPaths(), request.getOutputDirectory(), display, log));
                 return null;
             }
 
@@ -303,6 +304,7 @@ public class CIDeconvolveCommand {
         List<Path> inputPaths = List.of();
         List<Path> outputPaths = new java.util.ArrayList<>();
         List<String> failures = new java.util.ArrayList<>();
+        var channels = OutputDisplay.from(imageData).channels();
         try {
             Files.createDirectories(request.getOutputDirectory());
             appendLog(log, "Output format: " + request.getParameters().getOutputFormat());
@@ -345,6 +347,12 @@ public class CIDeconvolveCommand {
                     throw new IOException("ci_deconvolve failed with exit code " + processResult.getExitCode());
                 if (!Files.exists(outputPath))
                     throw new IOException("Expected output was not found: " + outputPath);
+                try {
+                    ChannelColors.write(outputPath, channels);
+                } catch (Exception e) {
+                    logger.warn("Unable to save source channel colors in {}", outputPath, e);
+                    appendLog(log, "Unable to save source channel colors in the export: " + e.getMessage());
+                }
                 copyProvenance(inputPath, outputPath);
             }
             if (!request.getParameters().isKeepTemporaryInputs())
@@ -656,26 +664,34 @@ public class CIDeconvolveCommand {
         return GeneralTools.toPath(uri);
     }
 
-    private void openOutputs(List<Path> outputPaths, Path outputDirectory, ImageData.ImageType imageType, RunLog log) {
+    private record OutputDisplay(ImageData.ImageType imageType, List<ImageChannel> channels) {
+        static OutputDisplay from(ImageData<?> data) {
+            var server = data.getServer();
+            return new OutputDisplay(data.getImageType(),
+                    server.isRGB() ? List.of() : List.copyOf(server.getMetadata().getChannels()));
+        }
+    }
+
+    private void openOutputs(List<Path> outputPaths, Path outputDirectory, OutputDisplay display, RunLog log) {
         if (outputPaths.size() != 1) {
             appendLog(log, "Created " + outputPaths.size() + " CIDeconvolve outputs:");
             outputPaths.forEach(path -> appendLog(log, "  " + path));
-            openMultipleOutputs(outputPaths, outputDirectory, imageType, log);
+            openMultipleOutputs(outputPaths, outputDirectory, display, log);
             return;
         }
-        openOutput(outputPaths.get(0), outputDirectory, imageType, log);
+        openOutput(outputPaths.get(0), outputDirectory, display, log);
     }
 
     private void openOutputsOnFxAndWait(
             List<Path> outputPaths,
             Path outputDirectory,
-            ImageData.ImageType imageType,
+            OutputDisplay display,
             RunLog log
     ) throws InterruptedException {
         if (outputPaths.isEmpty())
             return;
         if (Platform.isFxApplicationThread()) {
-            openOutputs(outputPaths, outputDirectory, imageType, log);
+            openOutputs(outputPaths, outputDirectory, display, log);
             return;
         }
 
@@ -683,7 +699,7 @@ public class CIDeconvolveCommand {
         AtomicReference<Throwable> error = new AtomicReference<>();
         Platform.runLater(() -> {
             try {
-                openOutputs(outputPaths, outputDirectory, imageType, log);
+                openOutputs(outputPaths, outputDirectory, display, log);
             } catch (Throwable t) {
                 error.set(t);
             } finally {
@@ -699,14 +715,14 @@ public class CIDeconvolveCommand {
     private void openMultipleOutputs(
             List<Path> outputPaths,
             Path outputDirectory,
-            ImageData.ImageType imageType,
+            OutputDisplay display,
             RunLog log
     ) {
-        int added = addOutputsToProject(outputPaths, imageType, log);
+        int added = addOutputsToProject(outputPaths, display, log);
         Optional<Path> firstCompatibleOutput = outputPaths.stream()
                 .filter(path -> !CIDeconvolveCli.isZarrV3(path))
                 .findFirst();
-        firstCompatibleOutput.ifPresent(path -> openOutput(path, outputDirectory, imageType, log));
+        firstCompatibleOutput.ifPresent(path -> openOutput(path, outputDirectory, display, log));
         if (firstCompatibleOutput.isEmpty())
             revealDirectory(outputDirectory);
         String message = "Deconvolution complete.\n\nCreated " + outputPaths.size()
@@ -716,7 +732,7 @@ public class CIDeconvolveCommand {
         appendLog(log, message.replace("\n", " "));
     }
 
-    private int addOutputsToProject(List<Path> outputPaths, ImageData.ImageType imageType, RunLog log) {
+    private int addOutputsToProject(List<Path> outputPaths, OutputDisplay display, RunLog log) {
         var project = qupath.getProject();
         if (project == null)
             return 0;
@@ -728,6 +744,7 @@ public class CIDeconvolveCommand {
             }
             try (ImageServer<BufferedImage> server = ImageServers.buildServer(outputPath.toUri())) {
                 applyCIDeconvolvePixelCalibration(server, outputPath, log);
+                ChannelColors.apply(server, display.channels());
                 var entry = project.addImage(server.getBuilder());
                 if (outputPath.getFileName() != null)
                     entry.setImageName(outputPath.getFileName().toString());
@@ -736,8 +753,8 @@ public class CIDeconvolveCommand {
                 Path provenance = provenancePath(outputPath);
                 if (Files.isRegularFile(provenance))
                     entry.putMetadataValue("CIDeconvolve provenance", Files.readString(provenance));
-                if (imageType != null && imageType != ImageData.ImageType.UNSET)
-                    entry.saveImageData(new ImageData<>(server, imageType));
+                if (display.imageType() != null && display.imageType() != ImageData.ImageType.UNSET)
+                    entry.saveImageData(new ImageData<>(server, display.imageType()));
                 added++;
                 appendLog(log, "Added output to QuPath project: " + outputPath);
             } catch (Exception e) {
@@ -754,7 +771,7 @@ public class CIDeconvolveCommand {
         return added;
     }
 
-    private void openOutput(Path outputPath, Path outputDirectory, ImageData.ImageType imageType, RunLog log) {
+    private void openOutput(Path outputPath, Path outputDirectory, OutputDisplay display, RunLog log) {
         if (CIDeconvolveCli.isZarrV3(outputPath)) {
             appendLog(log, "Created OME-Zarr output: " + outputPath);
             appendLog(log, "QuPath 0.7 cannot open this NGFF/Zarr v3 output automatically.");
@@ -768,7 +785,7 @@ public class CIDeconvolveCommand {
             return;
         }
         try {
-            openOutputInViewer(outputPath, imageType, log);
+            openOutputInViewer(outputPath, display, log);
             appendLog(log, "Opened output in QuPath: " + outputPath);
         } catch (Exception e) {
             appendLog(log, "Unable to open output in QuPath: " + e.getMessage());
@@ -776,13 +793,15 @@ public class CIDeconvolveCommand {
         }
     }
 
-    private void openOutputInViewer(Path outputPath, ImageData.ImageType imageType, RunLog log) throws IOException {
+    private void openOutputInViewer(Path outputPath, OutputDisplay display, RunLog log) throws IOException {
         var viewer = qupath.getViewer();
         if (viewer == null)
             throw new IOException("No active QuPath viewer is available.");
 
         ImageServer<BufferedImage> outputServer = ImageServers.buildServer(outputPath.toUri());
         applyCIDeconvolvePixelCalibration(outputServer, outputPath, log);
+        ChannelColors.apply(outputServer, display.channels());
+        var imageType = display.imageType();
         ImageData<BufferedImage> outputImageData = imageType == null || imageType == ImageData.ImageType.UNSET
                 ? new ImageData<>(outputServer)
                 : new ImageData<>(outputServer, imageType);
@@ -924,13 +943,6 @@ public class CIDeconvolveCommand {
         if (viewer == null)
             return null;
         return viewer.getImageData();
-    }
-
-    private ImageData.ImageType getActiveImageType() {
-        var viewer = qupath.getViewer();
-        if (viewer == null || viewer.getImageData() == null)
-            return null;
-        return viewer.getImageData().getImageType();
     }
 
     private static void revealDirectory(Path outputDirectory) {

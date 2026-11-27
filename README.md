@@ -19,6 +19,7 @@ This repository contains the QuPath extension that calls that Python package.
 - Supports batch ROI deconvolution from all annotations with a chosen class.
 - Preserves full Z and T extent for ROI exports while cropping only in XY.
 - Writes OME-Zarr or OME-TIFF output.
+- Preserves the source's QuPath channel colors in both export formats.
 - Opens compatible output images in QuPath after processing.
 - Adds multi-ROI outputs to the current QuPath project when possible.
 - Logs image metadata sources, fallback values, Python output, and generated
