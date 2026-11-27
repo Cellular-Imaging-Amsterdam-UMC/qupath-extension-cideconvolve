@@ -172,6 +172,8 @@ The log window Cancel button requests cancellation, terminates the active Python
 process tree, and removes the temporary PID file after the process exits. The
 Python CLI also checks for cancellation between major processing steps.
 
+The run-log window closes automatically when deconvolution completes successfully.
+
 ## Troubleshooting
 
 If validation fails, check:

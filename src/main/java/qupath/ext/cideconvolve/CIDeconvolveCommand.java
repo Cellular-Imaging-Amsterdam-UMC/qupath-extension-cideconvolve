@@ -266,8 +266,13 @@ public class CIDeconvolveCommand {
             @Override
             protected Void call() throws Exception {
                 CIDeconvolveResult result = executeRun(imageData, python, request, log, this::isCancelled);
-                if (result.getStatus() == CIDeconvolveResult.Status.SUCCESS)
-                    Platform.runLater(() -> openOutputs(result.getOutputPaths(), request.getOutputDirectory(), display, log));
+                if (result.getStatus() == CIDeconvolveResult.Status.SUCCESS) {
+                    Platform.runLater(() -> {
+                        if (log.stage() != null)
+                            log.stage().close();
+                        openOutputs(result.getOutputPaths(), request.getOutputDirectory(), display, log);
+                    });
+                }
                 return null;
             }
 
