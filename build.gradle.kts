@@ -17,6 +17,10 @@ qupathExtension {
     automaticModule = "nl.amsterdamumc.qupath.extension.cideconvolve"
 }
 
+tasks.withType<Jar>().configureEach {
+    archiveBaseName.set("qupath-ci-deconvolve")
+}
+
 tasks.shadowJar {
     archiveClassifier.set("")
 }

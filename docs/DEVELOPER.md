@@ -93,6 +93,6 @@ GUI-style asynchronous convenience.
 ## Releasing
 
 Update `version.txt`, run `clean test shadowJar`, and publish the resulting
-`qupath-extension-cideconvolve-<version>.jar` on the matching GitHub release.
+`qupath-ci-deconvolve-<version>.jar` on the matching GitHub release.
 Replace the previous CI Deconvolve JAR in QuPath Standalone Full and run its
 diagnostics to verify the bundled extension and Python environment.

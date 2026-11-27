@@ -66,9 +66,9 @@ or a newer version.
 
 ## Install The QuPath Extension
 
-1. Download the extension jar from the
-   [latest GitHub release], download `qupath-extension-cideconvolve-x.x.x.jar`.
-2. Copy the downloaded jar into your QuPath extensions folder.
+1. Download `qupath-ci-deconvolve-x.x.x.jar` from the [latest GitHub release].
+2. Copy the downloaded jar into your QuPath extensions folder. When upgrading,
+   replace the previous CI Deconvolve jar, including releases named `qupath-extension-cideconvolve-*.jar`.
 3. Restart QuPath.
 4. Open `Edit > Preferences > CI Deconvolve`.
 5. Set `Python executable` to the `python.exe` from your Python 3.12
