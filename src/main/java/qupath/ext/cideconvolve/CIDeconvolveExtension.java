@@ -33,7 +33,7 @@ public class CIDeconvolveExtension implements QuPathExtension {
         exampleScript.setOnAction(e -> openExampleScript(qupath));
         MenuItem docs = new MenuItem("Open documentation");
         docs.setOnAction(e -> QuPathGUI.openInBrowser(
-                "https://github.com/Cellular-Imaging-Amsterdam-UMC/qupath-extension-cideconvolve#readme"));
+                "https://github.com/Cellular-Imaging-Amsterdam-UMC/qupath-ci-deconvolve#readme"));
 
         var menu = qupath.getMenu("Extensions>" + NAME, true);
         menu.setGraphic(CIDeconvolveIcons.iconView(16));

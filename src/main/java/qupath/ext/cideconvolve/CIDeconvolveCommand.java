@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import qupath.fx.dialogs.Dialogs;
 import qupath.lib.common.GeneralTools;
 import qupath.lib.gui.QuPathGUI;
+import qupath.lib.gui.commands.Commands;
 import qupath.lib.images.ImageData;
 import qupath.lib.images.servers.CroppedImageServer;
 import qupath.lib.images.servers.ImageChannel;
@@ -26,6 +27,8 @@ import qupath.lib.images.servers.ImageServers;
 import qupath.lib.images.servers.ServerTools;
 import qupath.lib.images.writers.ImageWriterTools;
 import qupath.lib.objects.PathObject;
+import qupath.lib.projects.Project;
+import qupath.lib.projects.ProjectImageEntry;
 import qupath.lib.regions.ImageRegion;
 import qupath.lib.roi.interfaces.ROI;
 
@@ -37,6 +40,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -143,6 +147,7 @@ public class CIDeconvolveCommand {
         if (imageData == null || imageData.getServer() == null)
             throw new IllegalStateException("No active image is available.");
         var display = OutputDisplay.from(imageData);
+        var project = qupath.getProject();
         Path python = getPythonExecutable();
         if (python == null)
             throw new IllegalStateException("CIDeconvolve Python executable is not configured.");
@@ -152,7 +157,7 @@ public class CIDeconvolveCommand {
         try {
             CIDeconvolveResult result = executeRun(imageData, python, request, log, cancelled::get);
             if (result.getStatus() == CIDeconvolveResult.Status.SUCCESS)
-                openOutputsOnFxAndWait(result.getOutputPaths(), outputDirectory, display, log);
+                openOutputsOnFxAndWait(result.getOutputPaths(), outputDirectory, project, display, log);
             return new CIDeconvolveResult(
                     result.getStatus(),
                     result.getInputPaths(),
@@ -262,6 +267,7 @@ public class CIDeconvolveCommand {
             OutputDisplay display,
             RunLog log
     ) {
+        var project = qupath.getProject();
         return new Task<>() {
             @Override
             protected Void call() throws Exception {
@@ -270,7 +276,7 @@ public class CIDeconvolveCommand {
                     Platform.runLater(() -> {
                         if (log.stage() != null)
                             log.stage().close();
-                        openOutputs(result.getOutputPaths(), request.getOutputDirectory(), display, log);
+                        openOutputs(result.getOutputPaths(), request.getOutputDirectory(), project, display, log);
                     });
                 }
                 return null;
@@ -677,26 +683,59 @@ public class CIDeconvolveCommand {
         }
     }
 
-    private void openOutputs(List<Path> outputPaths, Path outputDirectory, OutputDisplay display, RunLog log) {
-        if (outputPaths.size() != 1) {
-            appendLog(log, "Created " + outputPaths.size() + " CIDeconvolve outputs:");
-            outputPaths.forEach(path -> appendLog(log, "  " + path));
-            openMultipleOutputs(outputPaths, outputDirectory, display, log);
+    private void openOutputs(List<Path> outputPaths, Path outputDirectory,
+                             Project<BufferedImage> project, OutputDisplay display, RunLog log) {
+        if (outputPaths.isEmpty())
+            return;
+        if (qupath.getProject() != project) {
+            String message = "The active project changed during processing. The exports are in " + outputDirectory;
+            appendLog(log, message);
+            Dialogs.showWarningNotification(TITLE, message);
             return;
         }
-        openOutput(outputPaths.get(0), outputDirectory, display, log);
+        var compatible = outputPaths.stream().filter(path -> !CIDeconvolveCli.isZarrV3(path)).toList();
+        for (Path output : outputPaths)
+            appendLog(log, "Created " + output);
+        if (compatible.isEmpty()) {
+            Dialogs.showPlainMessage(TITLE, "QuPath 0.7 cannot open the NGFF/Zarr v3 outputs in " + outputDirectory);
+            revealDirectory(outputDirectory);
+            return;
+        }
+        try {
+            if (project != null) {
+                var entries = addOutputsToProject(project, compatible, display, log);
+                qupath.refreshProject();
+                if (entries.isEmpty()) {
+                    Dialogs.showWarningNotification(TITLE, "Could not add exports to the project. Files are in " + outputDirectory);
+                    return;
+                }
+                if (!qupath.openImageEntry(entries.getFirst())) {
+                    appendLog(log, "Opening the first project result was cancelled.");
+                    return;
+                }
+            } else if (!openOutputInViewer(compatible.getFirst(), display, log)) {
+                return;
+            }
+            logLoadedPixelCalibration(qupath.getViewer().getServer(), log);
+            appendLog(log, "Opened " + qupath.getDisplayedImageName(qupath.getImageData()));
+        } catch (Exception e) {
+            logger.warn("Could not open CI Deconvolve results", e);
+            appendLog(log, "Unable to open output in QuPath: " + e.getMessage());
+            Dialogs.showWarningNotification(TITLE, "Could not open the exports. Files are in " + outputDirectory);
+        }
     }
 
     private void openOutputsOnFxAndWait(
             List<Path> outputPaths,
             Path outputDirectory,
+            Project<BufferedImage> project,
             OutputDisplay display,
             RunLog log
     ) throws InterruptedException {
         if (outputPaths.isEmpty())
             return;
         if (Platform.isFxApplicationThread()) {
-            openOutputs(outputPaths, outputDirectory, display, log);
+            openOutputs(outputPaths, outputDirectory, project, display, log);
             return;
         }
 
@@ -704,7 +743,7 @@ public class CIDeconvolveCommand {
         AtomicReference<Throwable> error = new AtomicReference<>();
         Platform.runLater(() -> {
             try {
-                openOutputs(outputPaths, outputDirectory, display, log);
+                openOutputs(outputPaths, outputDirectory, project, display, log);
             } catch (Throwable t) {
                 error.set(t);
             } finally {
@@ -717,102 +756,80 @@ public class CIDeconvolveCommand {
             appendLog(log, "Unable to import/open CIDeconvolve outputs: " + t.getMessage());
     }
 
-    private void openMultipleOutputs(
-            List<Path> outputPaths,
-            Path outputDirectory,
-            OutputDisplay display,
-            RunLog log
-    ) {
-        int added = addOutputsToProject(outputPaths, display, log);
-        Optional<Path> firstCompatibleOutput = outputPaths.stream()
-                .filter(path -> !CIDeconvolveCli.isZarrV3(path))
-                .findFirst();
-        firstCompatibleOutput.ifPresent(path -> openOutput(path, outputDirectory, display, log));
-        if (firstCompatibleOutput.isEmpty())
-            revealDirectory(outputDirectory);
-        String message = "Deconvolution complete.\n\nCreated " + outputPaths.size()
-                + " outputs in:\n" + outputDirectory;
-        if (added > 0)
-            message += "\n\nAdded " + added + " output images to the current QuPath project.";
-        appendLog(log, message.replace("\n", " "));
-    }
-
-    private int addOutputsToProject(List<Path> outputPaths, OutputDisplay display, RunLog log) {
-        var project = qupath.getProject();
-        if (project == null)
-            return 0;
-        int added = 0;
+    private List<ProjectImageEntry<BufferedImage>> addOutputsToProject(
+            Project<BufferedImage> project, List<Path> outputPaths, OutputDisplay display, RunLog log) throws IOException {
+        var entries = new ArrayList<ProjectImageEntry<BufferedImage>>();
         for (Path outputPath : outputPaths) {
-            if (CIDeconvolveCli.isZarrV3(outputPath)) {
-                appendLog(log, "Skipped adding Zarr v3 output to project: " + outputPath);
-                continue;
-            }
-            try (ImageServer<BufferedImage> server = ImageServers.buildServer(outputPath.toUri())) {
-                applyCIDeconvolvePixelCalibration(server, outputPath, log);
-                ChannelColors.apply(server, display.channels());
-                var entry = project.addImage(server.getBuilder());
-                if (outputPath.getFileName() != null)
+            ProjectImageEntry<BufferedImage> entry = null;
+            try {
+                var data = buildOutputData(outputPath, display, log);
+                try (var server = data.getServer()) {
+                    entry = project.addImage(server.getBuilder());
                     entry.setImageName(outputPath.getFileName().toString());
-                entry.putMetadataValue("CIDeconvolve output", "true");
-                entry.putMetadataValue("CIDeconvolve output path", outputPath.toString());
-                Path provenance = provenancePath(outputPath);
-                if (Files.isRegularFile(provenance))
-                    entry.putMetadataValue("CIDeconvolve provenance", Files.readString(provenance));
-                if (display.imageType() != null && display.imageType() != ImageData.ImageType.UNSET)
-                    entry.saveImageData(new ImageData<>(server, display.imageType()));
-                added++;
-                appendLog(log, "Added output to QuPath project: " + outputPath);
+                    entry.putMetadataValue("CIDeconvolve output", "true");
+                    entry.putMetadataValue("CIDeconvolve output path", outputPath.toString());
+                    Path provenance = provenancePath(outputPath);
+                    if (Files.isRegularFile(provenance))
+                        entry.putMetadataValue("CIDeconvolve provenance", Files.readString(provenance));
+                    entry.saveImageData(data);
+                    entries.add(entry);
+                }
             } catch (Exception e) {
+                if (entry != null && !entries.contains(entry))
+                    project.removeAllImages(List.of(entry), false);
                 appendLog(log, "Unable to add output to QuPath project: " + outputPath + " (" + e.getMessage() + ")");
             }
         }
-        if (added > 0) {
-            try {
-                project.syncChanges();
-            } catch (IOException e) {
-                appendLog(log, "Unable to save QuPath project after adding outputs: " + e.getMessage());
-            }
-        }
-        return added;
+        if (!entries.isEmpty())
+            project.syncChanges();
+        if (!entries.isEmpty() && entries.size() != outputPaths.size())
+            Dialogs.showWarningNotification(TITLE, "Some exports could not be added to the project.");
+        return entries;
     }
 
-    private void openOutput(Path outputPath, Path outputDirectory, OutputDisplay display, RunLog log) {
-        if (CIDeconvolveCli.isZarrV3(outputPath)) {
-            appendLog(log, "Created OME-Zarr output: " + outputPath);
-            appendLog(log, "QuPath 0.7 cannot open this NGFF/Zarr v3 output automatically.");
-            Dialogs.showPlainMessage(
-                    TITLE,
-                    "Deconvolution complete.\n\n"
-                            + "The OME-Zarr output was created, but QuPath 0.7 cannot open this "
-                            + "NGFF/Zarr v3 layout automatically.\n\n"
-                            + outputPath);
-            revealDirectory(outputDirectory);
-            return;
-        }
+    private ImageData<BufferedImage> buildOutputData(Path outputPath, OutputDisplay display, RunLog log) throws IOException {
+        var server = ImageServers.buildServer(outputPath.toUri());
         try {
-            openOutputInViewer(outputPath, display, log);
-            appendLog(log, "Opened output in QuPath: " + outputPath);
-        } catch (Exception e) {
-            appendLog(log, "Unable to open output in QuPath: " + e.getMessage());
-            revealDirectory(outputDirectory);
+            applyCIDeconvolvePixelCalibration(server, outputPath, log);
+            ChannelColors.apply(server, display.channels());
+            var imageType = switch (Objects.requireNonNullElse(display.imageType(), ImageData.ImageType.UNSET)) {
+                case UNSET -> server.isRGB() ? ImageData.ImageType.OTHER : ImageData.ImageType.FLUORESCENCE;
+                case BRIGHTFIELD_H_DAB, BRIGHTFIELD_H_E, BRIGHTFIELD_OTHER ->
+                        server.isRGB() ? display.imageType() : ImageData.ImageType.OTHER;
+                default -> display.imageType();
+            };
+            var data = new ImageData<>(server, imageType);
+            data.setChanged(false);
+            return data;
+        } catch (RuntimeException e) {
+            try {
+                server.close();
+            } catch (Exception closeError) {
+                e.addSuppressed(closeError);
+            }
+            throw e;
         }
     }
 
-    private void openOutputInViewer(Path outputPath, OutputDisplay display, RunLog log) throws IOException {
+    private boolean openOutputInViewer(Path outputPath, OutputDisplay display, RunLog log) throws IOException {
         var viewer = qupath.getViewer();
         if (viewer == null)
             throw new IOException("No active QuPath viewer is available.");
-
-        ImageServer<BufferedImage> outputServer = ImageServers.buildServer(outputPath.toUri());
-        applyCIDeconvolvePixelCalibration(outputServer, outputPath, log);
-        ChannelColors.apply(outputServer, display.channels());
-        var imageType = display.imageType();
-        ImageData<BufferedImage> outputImageData = imageType == null || imageType == ImageData.ImageType.UNSET
-                ? new ImageData<>(outputServer)
-                : new ImageData<>(outputServer, imageType);
-        viewer.setImageData(outputImageData);
-        logLoadedPixelCalibration(outputServer, log);
-        applyImageType(imageType, log);
+        var source = viewer.getImageData();
+        if (source != null && source.isChanged() && !Commands.promptToSaveImageData(qupath, source, true))
+            return false;
+        var data = buildOutputData(outputPath, display, log);
+        try {
+            viewer.setImageData(data);
+        } catch (IOException | RuntimeException e) {
+            try {
+                data.getServer().close();
+            } catch (Exception closeError) {
+                e.addSuppressed(closeError);
+            }
+            throw e;
+        }
+        return true;
     }
 
     private void applyCIDeconvolvePixelCalibration(
@@ -854,20 +871,6 @@ public class CIDeconvolveCommand {
                 ? String.format("%.6g um", cal.getZSpacingMicrons())
                 : cal.getZSpacing() + " " + cal.getZSpacingUnit();
         appendLog(log, "QuPath loaded pixel calibration: XY=" + xy + ", Z=" + z);
-    }
-
-    private void applyImageType(ImageData.ImageType imageType, RunLog log) {
-        if (imageType == null || imageType == ImageData.ImageType.UNSET)
-            return;
-        var viewer = qupath.getViewer();
-        if (viewer == null || viewer.getImageData() == null)
-            return;
-        try {
-            viewer.getImageData().setImageType(imageType);
-            appendLog(log, "Set output QuPath image type: " + imageType);
-        } catch (IllegalArgumentException e) {
-            appendLog(log, "Unable to set output image type: " + e.getMessage());
-        }
     }
 
     private RunLog createRunLog(CIDeconvolveParameters parameters) {

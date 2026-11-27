@@ -30,7 +30,7 @@ The extension jar is written under `build/libs`.
 For the current local QuPath standalone install, copy the shadow jar to:
 
 ```text
-C:\rahoebe\QuPath7-StandAlone-Full\QuPathExtensions\extensions
+C:\rahoebe\qupath\QuPath7-StandAlone-Full\QuPathExtensions\extensions
 ```
 
 ## Local Python Development
@@ -45,13 +45,13 @@ For local development, install it editable into the Python environment used by
 QuPath:
 
 ```powershell
-C:\rahoebe\QuPath7-StandAlone\PythonEnvs\cellpose3_spotiflow\python.exe -m pip install -e C:\rahoebe\Python\cideconvolve\ci_deconvolve_cli
+C:\rahoebe\qupath\QuPath7-StandAlone\PythonEnvs\cellpose3_spotiflow\python.exe -m pip install -e C:\rahoebe\Python\cideconvolve\ci_deconvolve_cli
 ```
 
 Validate what QuPath will see:
 
 ```powershell
-C:\rahoebe\QuPath7-StandAlone\PythonEnvs\cellpose3_spotiflow\python.exe -m ci_deconvolve.cli --validate-env
+C:\rahoebe\qupath\QuPath7-StandAlone\PythonEnvs\cellpose3_spotiflow\python.exe -m ci_deconvolve.cli --validate-env
 ```
 
 Expected output starts with `CIDECONVOLVE_OK` and reports

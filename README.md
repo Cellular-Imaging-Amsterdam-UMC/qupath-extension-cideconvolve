@@ -67,7 +67,7 @@ or a newer version.
 
 ## Install The QuPath Extension
 
-1. Download `qupath-ci-deconvolve-x.x.x.jar` from the [latest GitHub release].
+1. Download `qupath-ci-deconvolve-x.x.x.jar` from the [latest GitHub release](https://github.com/Cellular-Imaging-Amsterdam-UMC/qupath-ci-deconvolve/releases/latest).
 2. Copy the downloaded jar into your QuPath extensions folder. When upgrading,
    replace the previous CI Deconvolve jar, including releases named `qupath-extension-cideconvolve-*.jar`.
 3. Restart QuPath.
@@ -173,6 +173,8 @@ process tree, and removes the temporary PID file after the process exits. The
 Python CLI also checks for cancellation between major processing steps.
 
 The run-log window closes automatically when deconvolution completes successfully.
+QuPath adds compatible outputs to the active project and opens the first result.
+Without a project, the first compatible result opens directly.
 
 ## Troubleshooting
 

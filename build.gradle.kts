@@ -16,7 +16,7 @@ repositories {
 }
 
 qupathExtension {
-    name = "qupath-extension-cideconvolve"
+    name = "qupath-ci-deconvolve"
     group = "nl.amsterdamumc"
     version = extensionVersion
     description = "CI Deconvolve for QuPath"
