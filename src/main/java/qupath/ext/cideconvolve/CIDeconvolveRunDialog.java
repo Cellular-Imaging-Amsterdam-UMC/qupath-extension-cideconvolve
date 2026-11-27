@@ -1,7 +1,8 @@
 package qupath.ext.cideconvolve;
 
+import javafx.animation.PauseTransition;
 import javafx.event.ActionEvent;
-import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -21,10 +22,17 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.stage.Screen;
+import javafx.stage.Stage;
+import javafx.util.Duration;
 import javafx.util.StringConverter;
 import qupath.fx.dialogs.Dialogs;
 import qupath.lib.gui.QuPathGUI;
+import qupath.lib.images.servers.ServerTools;
 import qupath.lib.objects.classes.PathClass;
 
 import java.io.IOException;
@@ -36,6 +44,7 @@ import java.util.Set;
 
 public class CIDeconvolveRunDialog {
 
+    private static final String TITLE = CIDeconvolveExtension.NAME;
     private final QuPathGUI qupath;
     private final Path defaultOutputDirectory;
     private final Path settingsDirectory;
@@ -48,24 +57,41 @@ public class CIDeconvolveRunDialog {
 
     public Optional<CIDeconvolveRunRequest> show() {
         Dialog<CIDeconvolveRunRequest> dialog = new Dialog<>();
-        dialog.setTitle("CIDeconvolve");
-        dialog.setHeaderText("Run ci-deconvolve on the active QuPath image");
-        Node graphic = CIDeconvolveIcons.iconView(48);
-        if (graphic != null)
-            dialog.setGraphic(graphic);
+        dialog.setTitle(TITLE);
         dialog.initOwner(qupath.getStage());
+        dialog.setResizable(true);
 
-        var okButtonType = new ButtonType("Run", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(okButtonType, ButtonType.CANCEL);
+        var pane = dialog.getDialogPane();
+        CIDeconvolveWindowStyle.apply(pane);
+        var data = qupath.getImageData();
+        var subtitle = data == null ? "Deconvolution settings" : ServerTools.getDisplayableImageName(data.getServer());
+        pane.setHeader(CIDeconvolveWindowStyle.header(TITLE, subtitle));
+        pane.setPrefWidth(790);
+
+        var okButtonType = new ButtonType("Run Deconvolution", ButtonBar.ButtonData.OK_DONE);
+        pane.getButtonTypes().addAll(okButtonType, ButtonType.CANCEL);
 
         var controls = new Controls(defaultOutputDirectory, settingsDirectory, availableAnnotationClasses());
-        dialog.getDialogPane().setContent(createContent(controls));
-        Node okButton = dialog.getDialogPane().lookupButton(okButtonType);
+        var advanced = new TitledPane("Advanced settings", createAdvancedContent(controls));
+        advanced.setAnimated(false);
+        advanced.setExpanded(false);
+        var scroll = createContent(controls, advanced);
+        pane.setContent(scroll);
+        // Measure the viewport after the native dialog has settled on its monitor.
+        var refit = new PauseTransition(Duration.millis(100));
+        refit.setOnFinished(event -> fitSettingsWindow(scroll));
+        advanced.expandedProperty().addListener((observable, previous, expanded) ->
+                refit.playFromStart());
+        var okButton = (Button) pane.lookupButton(okButtonType);
+        okButton.getStyleClass().add("deconvolve-primary");
+        okButton.setMinWidth(Region.USE_PREF_SIZE);
+        ButtonBar.setButtonUniformSize(okButton, false);
+        ButtonBar.setButtonUniformSize(pane.lookupButton(ButtonType.CANCEL), false);
         okButton.addEventFilter(ActionEvent.ACTION, event -> {
             try {
                 readRequest(controls);
             } catch (IllegalArgumentException e) {
-                Dialogs.showErrorMessage("CIDeconvolve", e.getMessage());
+                Dialogs.showErrorMessage(TITLE, e.getMessage());
                 event.consume();
             }
         });
@@ -77,49 +103,62 @@ public class CIDeconvolveRunDialog {
             saveLastSettings(request.getParameters());
             return request;
         });
+        dialog.setOnShowing(e -> {
+            if (pane.getScene().getWindow() instanceof Stage stage) {
+                stage.setMinWidth(660);
+                stage.setMinHeight(360);
+            }
+        });
         dialog.setOnShown(e -> {
-            var window = dialog.getDialogPane().getScene().getWindow();
-            if (window instanceof javafx.stage.Stage stage)
+            if (pane.getScene().getWindow() instanceof Stage stage)
                 CIDeconvolveIcons.addStageIcon(stage);
+            refit.playFromStart();
         });
         return dialog.showAndWait();
     }
 
-    private Node createContent(Controls controls) {
-        GridPane main = new GridPane();
-        main.setHgap(8);
-        main.setVgap(6);
-        main.setPadding(new Insets(8));
+    private static void fitSettingsWindow(ScrollPane scroll) {
+        var scene = scroll.getScene();
+        if (scene == null || !(scene.getWindow() instanceof Stage stage) || !stage.isShowing() || stage.isMaximized())
+            return;
+        scene.getRoot().applyCss();
+        scene.getRoot().layout();
+        var viewport = scroll.getViewportBounds();
+        if (viewport.getWidth() <= 0 || viewport.getHeight() <= 0)
+            return;
 
-        int row = 0;
-        main.add(createRoiContent(controls), 0, row++, 6, 1);
-        addTripleRow(
-                main,
-                row++,
-                "Iterations", controls.iterations,
-                "Convergence", controls.convergence,
-                "Rel. threshold", controls.relThreshold);
-        addTripleRow(
-                main,
-                row++,
-                "T start", controls.timeStart,
-                "T stop", controls.timeStop,
-                "T step", controls.timeStep);
-        addRow(main, row++, "Start estimate", controls.start);
-        addRow(main, row++, "Microscope", controls.microscopeType);
-        main.add(createMetadataContent(controls), 0, row++, 6, 1);
-        main.add(controls.overruleMetadata, 1, row++, 5, 1);
-        main.add(createOutputContent(controls), 0, row++, 6, 1);
-        main.add(createSettingsContent(controls), 0, row++, 6, 1);
+        var screen = Screen.getScreensForRectangle(stage.getX() + stage.getWidth() / 2,
+                        stage.getY() + stage.getHeight() / 2, 1, 1)
+                .stream().findFirst().orElse(Screen.getPrimary()).getVisualBounds();
+        double chrome = stage.getHeight() - viewport.getHeight();
+        double required = Math.ceil(scroll.getContent().prefHeight(viewport.getWidth()) + chrome + 2);
+        double height = Math.max(stage.getMinHeight(), Math.min(required, screen.getHeight()));
+        stage.setHeight(height);
+        stage.setY(Math.clamp(stage.getY(), screen.getMinY(), Math.max(screen.getMinY(), screen.getMaxY() - height)));
+    }
 
-        TitledPane advanced = new TitledPane("Advanced", createAdvancedContent(controls));
-        advanced.setExpanded(false);
-        main.add(advanced, 0, row, 6, 1);
+    private ScrollPane createContent(Controls controls, TitledPane advanced) {
+        var algorithm = parameterGrid();
+        addPairRow(algorithm, 0, "Iterations", controls.iterations, "Start estimate", controls.start);
+        addPairRow(algorithm, 1, "Convergence", controls.convergence, "Relative threshold", controls.relThreshold);
+        addPairRow(algorithm, 2, "T start", controls.timeStart, "T stop", controls.timeStop);
+        addField(algorithm, 3, 0, "T step", controls.timeStep);
 
-        ScrollPane scrollPane = new ScrollPane(main);
+        var body = new VBox(8,
+                CIDeconvolveWindowStyle.card("Image region", createRoiContent(controls)),
+                CIDeconvolveWindowStyle.card("Deconvolution", algorithm),
+                CIDeconvolveWindowStyle.card("Microscope and image metadata", createMetadataContent(controls),
+                        controls.overruleMetadata),
+                CIDeconvolveWindowStyle.card("Output", createOutputContent(controls)),
+                CIDeconvolveWindowStyle.card("Saved settings", createSettingsContent(controls)),
+                advanced);
+        body.getStyleClass().add("deconvolve-body");
+
+        var scrollPane = new ScrollPane(body);
+        scrollPane.getStyleClass().add("deconvolve-scroll");
         scrollPane.setFitToWidth(true);
-        scrollPane.setPrefViewportWidth(720);
-        scrollPane.setPrefViewportHeight(450);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setPrefViewportWidth(770);
         return scrollPane;
     }
 
@@ -130,10 +169,10 @@ public class CIDeconvolveRunDialog {
         restore.setDisable(!controls.hasLastSettings());
         restore.setOnAction(e -> loadSettings(CIDeconvolveSettingsStore.lastSettingsPath(settingsDirectory), controls));
 
-        Button save = new Button("Save...");
+        Button save = new Button("Save…");
         save.setOnAction(e -> saveSettingsAs(controls));
 
-        Button load = new Button("Load...");
+        Button load = new Button("Load…");
         load.setOnAction(e -> loadSettingsFromFile(controls));
 
         controls.savedSettings.setOnAction(e -> {
@@ -144,13 +183,17 @@ public class CIDeconvolveRunDialog {
                 loadSettings(selected, controls);
         });
 
-        HBox row = new HBox(6, new Label("Settings"), controls.savedSettings, restore, save, load);
+        HBox row = new HBox(7, controls.savedSettings, restore, save, load);
+        row.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(controls.savedSettings, Priority.ALWAYS);
         return row;
     }
 
     private Node createOutputContent(Controls controls) {
-        HBox row = new HBox(8, new Label("Output format"), controls.outputFormat, controls.createProjection);
+        var format = new Label("Output format");
+        format.setLabelFor(controls.outputFormat);
+        HBox row = new HBox(10, format, controls.outputFormat, controls.createProjection);
+        row.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(controls.outputFormat, Priority.ALWAYS);
         return row;
     }
@@ -165,122 +208,64 @@ public class CIDeconvolveRunDialog {
         controls.annotationClass.disableProperty().bind(controls.annotationClassMode.selectedProperty().not());
 
         HBox row = new HBox(10,
-                new Label("Region:"),
                 controls.fullImage,
                 controls.selectedObjects,
                 controls.annotationClassMode,
                 controls.annotationClass);
+        row.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(controls.annotationClass, Priority.ALWAYS);
         return row;
     }
 
     private Node createMetadataContent(Controls controls) {
-        GridPane grid = new GridPane();
-        grid.setHgap(8);
-        grid.setVgap(6);
-        grid.getColumnConstraints().setAll(
-                fixedColumn(118),
-                growingColumn(150),
-                fixedColumn(118),
-                growingColumn(150));
-        addCompactPairRow(grid, 0, "NA", controls.na, "Pinhole Airy", controls.pinholeAiry);
-        addCompactPairRow(grid, 1, "Immersion RI", controls.refractiveIndex, "Sample RI", controls.sampleRi);
-        addCompactPairRow(grid, 2, "Excitation wl", controls.excitationWl, "Emission wl", controls.emissionWl);
-        addCompactPairRow(grid, 3, "PixelSize XY (um)", controls.pixelSizeXy, "PixelSize Z (um)", controls.pixelSizeZ);
+        var grid = parameterGrid();
+        addPairRow(grid, 0, "Microscope", controls.microscopeType, "Pinhole (Airy)", controls.pinholeAiry);
+        addPairRow(grid, 1, "Numerical aperture", controls.na, "Immersion RI", controls.refractiveIndex);
+        addPairRow(grid, 2, "Sample RI", controls.sampleRi, "Excitation (nm)", controls.excitationWl);
+        addPairRow(grid, 3, "Emission (nm)", controls.emissionWl, "Pixel size XY (µm)", controls.pixelSizeXy);
+        addField(grid, 4, 0, "Pixel size Z (µm)", controls.pixelSizeZ);
         return grid;
     }
 
     private Node createAdvancedContent(Controls controls) {
-        GridPane grid = new GridPane();
-        grid.setHgap(8);
-        grid.setVgap(6);
-        grid.setPadding(new Insets(8, 0, 0, 0));
-        int row = 0;
-        HBox checkboxes = new HBox(16, controls.saveQcMips, controls.writeManifest, controls.keepTemporaryInputs);
-        grid.add(checkboxes, 0, row++, 4, 1);
-        addCompactPairRow(grid, row++, "Log output", controls.logTarget, "Device", controls.device);
-        addCompactPairRow(grid, row++, "Check every", controls.checkEvery, "Background", controls.background);
-        addCompactPairRow(grid, row++, "Offset", controls.offset, "Prefilter sigma", controls.prefilterSigma);
-        addCompactPairRow(grid, row++, "SNR mode", controls.snrMode, "SNR value", controls.snrValue);
-        addCompactPairRow(grid, row++, "Acuity", controls.acuity, "2D mode", controls.twoDMode);
-        addCompactPairRow(grid, row++, "2D WF strength", controls.twoDWfAggressiveness, "2D WF bg radius", controls.twoDWfBgRadiusUm);
-        addCompactPairRow(grid, row++, "2D WF bg scale", controls.twoDWfBgScale, "", new Label(""));
+        var grid = parameterGrid();
+        addPairRow(grid, 0, "Log output", controls.logTarget, "Device", controls.device);
+        addPairRow(grid, 1, "Check every", controls.checkEvery, "Background", controls.background);
+        addPairRow(grid, 2, "Offset", controls.offset, "Prefilter sigma", controls.prefilterSigma);
+        addPairRow(grid, 3, "SNR mode", controls.snrMode, "SNR value", controls.snrValue);
+        addPairRow(grid, 4, "Acuity", controls.acuity, "2D mode", controls.twoDMode);
+        addPairRow(grid, 5, "2D WF strength", controls.twoDWfAggressiveness, "2D WF bg radius", controls.twoDWfBgRadiusUm);
+        addField(grid, 6, 0, "2D WF bg scale", controls.twoDWfBgScale);
+        var checkboxes = new FlowPane(14, 6, controls.saveQcMips, controls.writeManifest, controls.keepTemporaryInputs);
+        return new VBox(8, grid, checkboxes);
+    }
+
+    private static GridPane parameterGrid() {
+        var grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(7);
+        grid.getColumnConstraints().addAll(new ColumnConstraints(124), valueColumn(),
+                new ColumnConstraints(124), valueColumn());
         return grid;
     }
 
-    private static void addRow(GridPane grid, int row, String label, Node control) {
-        Label labelNode = new Label(label);
-        labelNode.setLabelFor(control);
-        grid.add(labelNode, 0, row);
-        grid.add(control, 1, row, 5, 1);
-        GridPane.setHgrow(control, Priority.ALWAYS);
+    private static void addPairRow(GridPane grid, int row, String label1, Region control1, String label2, Region control2) {
+        addField(grid, row, 0, label1, control1);
+        addField(grid, row, 2, label2, control2);
     }
 
-    private static void addPairRow(GridPane grid, int row, String label1, Node control1, String label2, Node control2) {
-        Label labelNode1 = new Label(label1);
-        labelNode1.setLabelFor(control1);
-        Label labelNode2 = new Label(label2);
-        labelNode2.setLabelFor(control2);
-        grid.add(labelNode1, 0, row);
-        grid.add(control1, 1, row, 2, 1);
-        grid.add(labelNode2, 3, row);
-        grid.add(control2, 4, row, 2, 1);
-        GridPane.setHgrow(control1, Priority.ALWAYS);
-        GridPane.setHgrow(control2, Priority.ALWAYS);
+    private static void addField(GridPane grid, int row, int column, String text, Region control) {
+        var label = new Label(text);
+        label.setLabelFor(control);
+        grid.add(label, column, row);
+        grid.add(control, column + 1, row);
+        control.setMaxWidth(Double.MAX_VALUE);
     }
 
-    private static void addCompactPairRow(GridPane grid, int row, String label1, Node control1, String label2, Node control2) {
-        Label labelNode1 = new Label(label1);
-        labelNode1.setLabelFor(control1);
-        Label labelNode2 = new Label(label2);
-        labelNode2.setLabelFor(control2);
-        grid.add(labelNode1, 0, row);
-        grid.add(control1, 1, row);
-        grid.add(labelNode2, 2, row);
-        grid.add(control2, 3, row);
-        GridPane.setHgrow(control1, Priority.ALWAYS);
-        GridPane.setHgrow(control2, Priority.ALWAYS);
-    }
-
-    private static ColumnConstraints fixedColumn(double width) {
-        ColumnConstraints constraints = new ColumnConstraints();
-        constraints.setMinWidth(width);
-        constraints.setPrefWidth(width);
-        return constraints;
-    }
-
-    private static ColumnConstraints growingColumn(double prefWidth) {
-        ColumnConstraints constraints = new ColumnConstraints();
-        constraints.setPrefWidth(prefWidth);
-        constraints.setHgrow(Priority.ALWAYS);
-        return constraints;
-    }
-
-    private static void addTripleRow(
-            GridPane grid,
-            int row,
-            String label1,
-            Node control1,
-            String label2,
-            Node control2,
-            String label3,
-            Node control3
-    ) {
-        Label labelNode1 = new Label(label1);
-        labelNode1.setLabelFor(control1);
-        Label labelNode2 = new Label(label2);
-        labelNode2.setLabelFor(control2);
-        Label labelNode3 = new Label(label3);
-        labelNode3.setLabelFor(control3);
-        grid.add(labelNode1, 0, row);
-        grid.add(control1, 1, row);
-        grid.add(labelNode2, 2, row);
-        grid.add(control2, 3, row);
-        grid.add(labelNode3, 4, row);
-        grid.add(control3, 5, row);
-        GridPane.setHgrow(control1, Priority.ALWAYS);
-        GridPane.setHgrow(control2, Priority.ALWAYS);
-        GridPane.setHgrow(control3, Priority.ALWAYS);
+    private static ColumnConstraints valueColumn() {
+        var column = new ColumnConstraints(95, 160, Double.MAX_VALUE);
+        column.setHgrow(Priority.ALWAYS);
+        return column;
     }
 
     private CIDeconvolveRunRequest readRequest(Controls controls) {
@@ -378,7 +363,7 @@ public class CIDeconvolveRunDialog {
         try {
             CIDeconvolveSettingsStore.save(CIDeconvolveSettingsStore.lastSettingsPath(settingsDirectory), parameters);
         } catch (IOException e) {
-            Dialogs.showErrorMessage("CIDeconvolve", "Unable to save last settings: " + e.getMessage());
+            Dialogs.showErrorMessage(TITLE, "Unable to save last settings: " + e.getMessage());
         }
     }
 
@@ -387,11 +372,11 @@ public class CIDeconvolveRunDialog {
         try {
             request = readRequest(controls);
         } catch (IllegalArgumentException e) {
-            Dialogs.showErrorMessage("CIDeconvolve", e.getMessage());
+            Dialogs.showErrorMessage(TITLE, e.getMessage());
             return;
         }
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Save CIDeconvolve settings");
+        chooser.setTitle("Save CI Deconvolve settings");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON files", "*.json"));
         chooser.setInitialDirectory(settingsDirectory.toFile());
         chooser.setInitialFileName("settings.json");
@@ -403,13 +388,13 @@ public class CIDeconvolveRunDialog {
             controls.refreshSavedSettings();
             controls.savedSettings.setValue(file.toPath());
         } catch (IOException e) {
-            Dialogs.showErrorMessage("CIDeconvolve", "Unable to save settings: " + e.getMessage());
+            Dialogs.showErrorMessage(TITLE, "Unable to save settings: " + e.getMessage());
         }
     }
 
     private void loadSettingsFromFile(Controls controls) {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Load CIDeconvolve settings");
+        chooser.setTitle("Load CI Deconvolve settings");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON files", "*.json"));
         chooser.setInitialDirectory(settingsDirectory.toFile());
         var file = chooser.showOpenDialog(qupath.getStage());
@@ -425,7 +410,7 @@ public class CIDeconvolveRunDialog {
             if (!CIDeconvolveSettingsStore.LAST_SETTINGS_NAME.equalsIgnoreCase(path.getFileName().toString()))
                 controls.savedSettings.setValue(path);
         } catch (IOException e) {
-            Dialogs.showErrorMessage("CIDeconvolve", "Unable to load settings: " + e.getMessage());
+            Dialogs.showErrorMessage(TITLE, "Unable to load settings: " + e.getMessage());
         } finally {
             controls.applyingSettings = false;
         }
@@ -524,9 +509,9 @@ public class CIDeconvolveRunDialog {
                 CIDeconvolveParameters.FORMAT_OME_ZARR, CIDeconvolveParameters.FORMAT_OME_TIFF);
         private final ComboBox<String> logTarget = combo(CIDeconvolveParameters.LOG_DIALOG,
                 CIDeconvolveParameters.LOG_DIALOG, CIDeconvolveParameters.LOG_QUPATH);
-        private final RadioButton fullImage = new RadioButton("Full Image");
-        private final RadioButton selectedObjects = new RadioButton("Selected");
-        private final RadioButton annotationClassMode = new RadioButton("Class");
+        private final RadioButton fullImage = new RadioButton("Full image");
+        private final RadioButton selectedObjects = new RadioButton("Selected objects");
+        private final RadioButton annotationClassMode = new RadioButton("Annotation class");
         private final ComboBox<String> annotationClass = new ComboBox<>();
         private final CheckBox createProjection = new CheckBox("Create max-Z projection");
         private final CheckBox saveQcMips = new CheckBox("Save QC MIPs");
@@ -581,18 +566,6 @@ public class CIDeconvolveRunDialog {
             timeStop.setEditable(true);
             timeStep.setEditable(true);
             checkEvery.setEditable(true);
-            iterations.setPrefWidth(116);
-            iterations.setMaxWidth(116);
-            timeStart.setPrefWidth(116);
-            timeStart.setMaxWidth(116);
-            timeStop.setPrefWidth(116);
-            timeStop.setMaxWidth(116);
-            timeStep.setPrefWidth(116);
-            timeStep.setMaxWidth(116);
-            convergence.setPrefWidth(145);
-            convergence.setMaxWidth(145);
-            relThreshold.setPrefWidth(120);
-            relThreshold.setMaxWidth(120);
             saveQcMips.setSelected(false);
             writeManifest.setSelected(false);
             annotationClass.getItems().setAll(annotationClasses);

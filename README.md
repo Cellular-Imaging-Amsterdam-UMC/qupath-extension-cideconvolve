@@ -1,6 +1,6 @@
-# QuPath CIDeconvolve Extension
+# CI Deconvolve for QuPath
 
-Run CIDeconvolve deconvolution from QuPath and open the result back in QuPath.
+Run microscopy deconvolution from QuPath and open the result in the viewer.
 
 CIDeconvolve is a Python/PyTorch deconvolution tool for microscopy images. This
 QuPath extension provides a graphical dialog, settings management, ROI
@@ -70,12 +70,12 @@ or a newer version.
    [latest GitHub release], download `qupath-extension-cideconvolve-x.x.x.jar`.
 2. Copy the downloaded jar into your QuPath extensions folder.
 3. Restart QuPath.
-4. Open `Edit > Preferences > CIDeconvolve`.
+4. Open `Edit > Preferences > CI Deconvolve`.
 5. Set `Python executable` to the `python.exe` from your Python 3.12
    environment.
 6. Optional: choose whether outputs go next to the QuPath project or next to the
    original image file.
-7. Run `Extensions > CIDeconvolve > Validate Python environment`.
+7. Run `Extensions > CI Deconvolve > Validate Python environment`.
 
 If validation succeeds, the extension is ready to use.
 
@@ -84,7 +84,7 @@ If validation succeeds, the extension is ready to use.
 Open an image in QuPath, then choose:
 
 ```text
-Extensions > CIDeconvolve > Run deconvolution...
+Extensions > CI Deconvolve > Run deconvolution…
 ```
 
 Important controls:
@@ -95,7 +95,7 @@ Important controls:
 - `Settings`: save/load reusable parameter sets in the project settings folder.
 - `Overrule image metadata`: use dialog values instead of metadata found in the
   image.
-- `Advanced`: stabilization, convergence, 2D widefield, QC, and temporary file
+- `Advanced settings`: stabilization, convergence, 2D widefield, QC, and temporary file
   options.
 - `SNR mode`: `none`, `auto`, or `manual`. `SNR value` is used only for
   manual mode; `Acuity` ranges from -100 (smoother) to +100 (sharper).
@@ -138,7 +138,7 @@ compatibility.
 Open:
 
 ```text
-Extensions > CIDeconvolve > Open example Groovy script
+Extensions > CI Deconvolve > Open example Groovy script
 ```
 
 The example script includes comments for the available options. For automatic

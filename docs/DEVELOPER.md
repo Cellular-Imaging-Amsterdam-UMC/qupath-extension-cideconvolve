@@ -18,8 +18,8 @@ The extension does not bundle Python, PyTorch, or CIDeconvolve.
 
 ## Build
 
-The project is pinned to the locally installed Temurin 25 JDK in
-`gradle.properties`.
+The Gradle build uses Java 25. It reads the extension version from `version.txt`
+unless `-PreleaseVersion` supplies a version explicitly.
 
 ```powershell
 .\gradlew.bat clean test shadowJar
@@ -30,7 +30,7 @@ The extension jar is written under `build/libs`.
 For the current local QuPath standalone install, copy the shadow jar to:
 
 ```text
-C:\rahoebe\QuPath7-StandAlone\QuPathExtensions\extensions
+C:\rahoebe\QuPath7-StandAlone-Full\QuPathExtensions\extensions
 ```
 
 ## Local Python Development
@@ -92,18 +92,7 @@ GUI-style asynchronous convenience.
 
 ## Releasing
 
-Maintainers can create a GitHub Release with the installable QuPath jar by
-running:
-
-```cmd
-release_github.cmd
-```
-
-The script reads `version.txt`, builds
-`qupath-extension-cideconvolve-0.4.0.jar`, creates the matching Git tag, and
-uploads the jar as a GitHub Release asset. Pass a tag explicitly to override the
-file:
-
-```cmd
-release_github.cmd v0.4.0
-```
+Update `version.txt`, run `clean test shadowJar`, and publish the resulting
+`qupath-extension-cideconvolve-<version>.jar` on the matching GitHub release.
+Replace the previous CI Deconvolve JAR in QuPath Standalone Full and run its
+diagnostics to verify the bundled extension and Python environment.

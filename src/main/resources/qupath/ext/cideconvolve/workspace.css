@@ -1,0 +1,92 @@
+.ci-deconvolve {
+    -ci-deconvolve-surface: derive(-fx-background, 4%);
+    -ci-deconvolve-border: derive(-fx-background, -12%);
+    -ci-deconvolve-accent: #176d64;
+    -fx-background-color: -fx-background;
+    -fx-font-size: 13px;
+}
+
+.ci-deconvolve .deconvolve-header {
+    -fx-background-color: -ci-deconvolve-surface;
+    -fx-border-color: transparent transparent -ci-deconvolve-border transparent;
+    -fx-padding: 10 12;
+}
+
+.ci-deconvolve .deconvolve-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.ci-deconvolve .deconvolve-context {
+    -fx-font-size: 12px;
+}
+
+.ci-deconvolve .deconvolve-body {
+    -fx-padding: 9 11;
+}
+
+.ci-deconvolve.dialog-pane > .content {
+    -fx-padding: 0;
+}
+
+.ci-deconvolve .deconvolve-scroll,
+.ci-deconvolve .deconvolve-scroll > .viewport {
+    -fx-background-color: -fx-background;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.ci-deconvolve .deconvolve-scroll > .scroll-bar:vertical {
+    -fx-pref-width: 17px;
+}
+
+.ci-deconvolve .deconvolve-scroll .thumb {
+    -fx-background-color: ladder(-fx-background, #82969b 49%, #687d83 51%);
+    -fx-background-insets: 1 2;
+    -fx-background-radius: 6px;
+}
+
+.ci-deconvolve .deconvolve-card {
+    -fx-background-color: -ci-deconvolve-surface;
+    -fx-background-radius: 8px;
+    -fx-border-color: -ci-deconvolve-border;
+    -fx-border-radius: 8px;
+    -fx-padding: 9 11 10;
+}
+
+.ci-deconvolve .deconvolve-card-heading {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.ci-deconvolve .deconvolve-footer,
+.ci-deconvolve.dialog-pane > .button-bar {
+    -fx-background-color: -ci-deconvolve-surface;
+    -fx-border-color: -ci-deconvolve-border transparent transparent transparent;
+}
+
+.ci-deconvolve .deconvolve-footer {
+    -fx-padding: 7 11;
+}
+
+.ci-deconvolve .deconvolve-primary {
+    -fx-background-color: -ci-deconvolve-accent;
+    -fx-background-radius: 6px;
+    -fx-padding: 6 12;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.ci-deconvolve .deconvolve-primary:hover {
+    -fx-background-color: #12584f;
+}
+
+.ci-deconvolve .deconvolve-primary:focused {
+    -fx-border-color: -fx-focus-color;
+    -fx-border-radius: 6px;
+}
+
+.ci-deconvolve .deconvolve-log {
+    -fx-font-family: "Monospaced";
+    -fx-font-size: 12px;
+}

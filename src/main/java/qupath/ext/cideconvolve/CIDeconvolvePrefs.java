@@ -10,7 +10,7 @@ import java.util.List;
 
 public final class CIDeconvolvePrefs {
 
-    public static final String CATEGORY = "CIDeconvolve";
+    public static final String CATEGORY = CIDeconvolveExtension.NAME;
     public static final String OUTPUT_LOCATION_PROJECT = "project folder";
     public static final String OUTPUT_LOCATION_DATA_FILE = "original data file folder";
 

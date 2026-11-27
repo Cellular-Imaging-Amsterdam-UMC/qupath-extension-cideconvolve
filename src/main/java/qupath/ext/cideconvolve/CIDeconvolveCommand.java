@@ -2,9 +2,11 @@ package qupath.ext.cideconvolve;
 
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -20,6 +22,7 @@ import qupath.lib.images.ImageData;
 import qupath.lib.images.servers.CroppedImageServer;
 import qupath.lib.images.servers.ImageServer;
 import qupath.lib.images.servers.ImageServers;
+import qupath.lib.images.servers.ServerTools;
 import qupath.lib.images.writers.ImageWriterTools;
 import qupath.lib.objects.PathObject;
 import qupath.lib.regions.ImageRegion;
@@ -45,7 +48,7 @@ import java.util.regex.Pattern;
 public class CIDeconvolveCommand {
 
     private static final Logger logger = LoggerFactory.getLogger(CIDeconvolveCommand.class);
-    private static final String TITLE = "CIDeconvolve";
+    private static final String TITLE = CIDeconvolveExtension.NAME;
     private static final Pattern UNSAFE_FILENAME_CHARS = Pattern.compile("[^A-Za-z0-9._-]+");
     private static final com.google.gson.Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
@@ -59,7 +62,7 @@ public class CIDeconvolveCommand {
 
     public void runDeconvolution() {
         if (runningTask != null && runningTask.isRunning()) {
-            Dialogs.showPlainMessage(TITLE, "CIDeconvolve is already running.");
+            Dialogs.showPlainMessage(TITLE, "Deconvolution is already running.");
             return;
         }
 
@@ -90,7 +93,7 @@ public class CIDeconvolveCommand {
 
     public void runDeconvolution(CIDeconvolveParameters parameters, Path outputDirectory) {
         if (runningTask != null && runningTask.isRunning()) {
-            Dialogs.showPlainMessage(TITLE, "CIDeconvolve is already running.");
+            Dialogs.showPlainMessage(TITLE, "Deconvolution is already running.");
             return;
         }
         ImageData<BufferedImage> imageData = getActiveImageData();
@@ -853,18 +856,32 @@ public class CIDeconvolveCommand {
         TextArea logArea = new TextArea();
         logArea.setEditable(false);
         logArea.setWrapText(false);
-        Button cancelButton = new Button("Cancel");
+        logArea.getStyleClass().add("deconvolve-log");
+        Button cancelButton = new Button("Stop");
         Button closeButton = new Button("Close");
+        closeButton.getStyleClass().add("deconvolve-primary");
 
-        HBox buttons = new HBox(6, cancelButton, closeButton);
-        VBox pane = new VBox(6, logArea, buttons);
+        HBox buttons = new HBox(8, cancelButton, closeButton);
+        buttons.setAlignment(Pos.CENTER_RIGHT);
+        buttons.getStyleClass().add("deconvolve-footer");
+        VBox pane = new VBox(logArea);
+        pane.getStyleClass().add("deconvolve-body");
         VBox.setVgrow(logArea, Priority.ALWAYS);
+        var root = new BorderPane(pane);
+        var data = getActiveImageData();
+        var subtitle = data == null ? "Python output" : ServerTools.getDisplayableImageName(data.getServer());
+        root.setTop(CIDeconvolveWindowStyle.header("Deconvolution log", subtitle));
+        root.setBottom(buttons);
+        CIDeconvolveWindowStyle.apply(root);
+
         Stage stage = new Stage();
-        stage.setTitle("CIDeconvolve log");
-        CIDeconvolveIcons.addStageIcon(stage);
         stage.initOwner(qupath.getStage());
         stage.initModality(Modality.NONE);
-        stage.setScene(new Scene(pane, 760, 480));
+        stage.setTitle(TITLE + " · Run log");
+        CIDeconvolveIcons.addStageIcon(stage);
+        stage.setMinWidth(440);
+        stage.setMinHeight(280);
+        stage.setScene(new Scene(root, 760, 480));
         closeButton.setOnAction(e -> stage.close());
         stage.show();
         return new RunLog(logArea, cancelButton, stage, new java.util.concurrent.CopyOnWriteArrayList<>());
@@ -891,7 +908,7 @@ public class CIDeconvolveCommand {
     private Path getPythonExecutable() {
         String path = CIDeconvolvePrefs.pythonPathProperty().get();
         if (path == null || path.isBlank()) {
-            Dialogs.showErrorMessage(TITLE, "Set the CIDeconvolve Python executable in QuPath preferences first.");
+            Dialogs.showErrorMessage(TITLE, "Set the Python executable in the CI Deconvolve preferences first.");
             return null;
         }
         Path python = Path.of(path);

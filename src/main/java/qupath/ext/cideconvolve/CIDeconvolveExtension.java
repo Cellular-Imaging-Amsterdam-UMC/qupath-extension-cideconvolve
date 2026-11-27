@@ -10,6 +10,7 @@ import qupath.lib.gui.tools.MenuTools;
 
 public class CIDeconvolveExtension implements QuPathExtension {
 
+    static final String NAME = "CI Deconvolve";
     private static final Logger logger = LoggerFactory.getLogger(CIDeconvolveExtension.class);
     private static final Version QUPATH_VERSION = Version.parse("v0.7.0");
     private boolean installed;
@@ -24,8 +25,7 @@ public class CIDeconvolveExtension implements QuPathExtension {
         CIDeconvolvePrefs.installPreferenceItems(qupath);
 
         CIDeconvolveCommand command = new CIDeconvolveCommand(qupath);
-        MenuItem run = new MenuItem("Run deconvolution...");
-        run.setGraphic(CIDeconvolveIcons.iconView(16));
+        MenuItem run = new MenuItem("Run deconvolution…");
         run.setOnAction(e -> command.runDeconvolution());
         MenuItem validate = new MenuItem("Validate Python environment");
         validate.setOnAction(e -> command.validatePythonEnvironment());
@@ -35,7 +35,9 @@ public class CIDeconvolveExtension implements QuPathExtension {
         docs.setOnAction(e -> QuPathGUI.openInBrowser(
                 "https://github.com/Cellular-Imaging-Amsterdam-UMC/qupath-extension-cideconvolve#readme"));
 
-        MenuTools.addMenuItems(qupath.getMenu("Extensions>CIDeconvolve", true), run, validate, exampleScript, docs);
+        var menu = qupath.getMenu("Extensions>" + NAME, true);
+        menu.setGraphic(CIDeconvolveIcons.iconView(16));
+        MenuTools.addMenuItems(menu, run, validate, exampleScript, docs);
     }
 
     private static void openExampleScript(QuPathGUI qupath) {
@@ -43,7 +45,7 @@ public class CIDeconvolveExtension implements QuPathExtension {
                 import qupath.ext.cideconvolve.CIDeconvolve
 
                 /**
-                 * CIDeconvolve QuPath script example.
+                 * CI Deconvolve QuPath script example.
                  *
                  * This script runs ci-deconvolve through the QuPath CIDeconvolve extension.
                  * It can process the full active image, selected annotations, or all
@@ -51,7 +53,7 @@ public class CIDeconvolveExtension implements QuPathExtension {
                  *
                  * Before running:
                  *   1. Install Python 3.12 with ci-deconvolve and PyTorch.
-                 *   2. In QuPath, set Edit > Preferences > CIDeconvolve > Python executable.
+                 *   2. In QuPath, set Edit > Preferences > CI Deconvolve > Python executable.
                  *   3. Open an image in QuPath.
                  *
                  * Logging:
@@ -156,12 +158,12 @@ public class CIDeconvolveExtension implements QuPathExtension {
         var editor = qupath.getScriptEditor();
         if (editor == null)
             return;
-        editor.showScript("CIDeconvolve example.groovy", script);
+        editor.showScript("CI Deconvolve example.groovy", script);
     }
 
     @Override
     public String getName() {
-        return "CIDeconvolve extension";
+        return NAME;
     }
 
     @Override

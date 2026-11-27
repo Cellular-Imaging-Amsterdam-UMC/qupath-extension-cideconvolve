@@ -6,14 +6,14 @@ plugins {
 }
 
 val extensionVersion = providers.gradleProperty("releaseVersion")
-    .orElse("0.2.1-SNAPSHOT")
+    .orElse(providers.fileContents(layout.projectDirectory.file("version.txt")).asText.map { it.trim().removePrefix("v") })
     .get()
 
 qupathExtension {
     name = "qupath-extension-cideconvolve"
     group = "nl.amsterdamumc"
     version = extensionVersion
-    description = "QuPath extension to run CIDeconvolve from an existing Python environment"
+    description = "CI Deconvolve for QuPath"
     automaticModule = "nl.amsterdamumc.qupath.extension.cideconvolve"
 }
 
@@ -27,6 +27,7 @@ dependencies {
     shadow(libs.bundles.qupath)
     shadow(libs.bundles.logging)
     shadow(libs.qupath.fxtras)
+    compileOnly("net.java.dev.jna:jna:5.17.0")
 
     // For testing
     testImplementation(libs.bundles.qupath)
